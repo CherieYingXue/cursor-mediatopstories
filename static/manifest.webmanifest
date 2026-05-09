@@ -1,0 +1,9 @@
+{
+  "name": "Daily Top Stories Checker",
+  "short_name": "TopStories",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#0f172a",
+  "icons": []
+}

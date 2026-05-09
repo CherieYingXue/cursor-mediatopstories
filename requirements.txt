@@ -1,0 +1,5 @@
+flask
+feedparser
+pyinstaller
+apscheduler
+gunicorn
