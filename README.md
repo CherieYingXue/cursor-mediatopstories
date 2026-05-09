@@ -66,15 +66,50 @@ After build, use:
 
 - `dist/topstories.exe`
 
-## One-click deploy (Render)
+## Deploy to GitHub + Render (公网 / 手机访问)
 
-This repo includes `render.yaml` and `Procfile`.
+我无法替你登录 GitHub 或 Render；按下面做即可（约 10 分钟）。
 
-1. Push this folder to GitHub.
-2. In Render, create a new Blueprint/Web Service from the repo.
-3. Render auto-detects config and deploys.
-4. Open the deployed URL on your phone.
-5. Tap **Add to Home Screen** in your mobile browser.
+### 1. 在 GitHub 新建空仓库
+
+1. 打开 [github.com/new](https://github.com/new)
+2. Repository name 自定（例如 `daily-top-stories-checker`）
+3. **不要**勾选 “Add a README”
+4. 创建后复制仓库地址，例如 `https://github.com/你的用户名/daily-top-stories-checker.git`
+
+### 2. 在本机推送代码
+
+在项目目录 `C:\Users\xhs\Desktop\cursor` 打开 **Git Bash** 或 **PowerShell**，执行（把 URL 换成你的）：
+
+```bash
+git remote add origin https://github.com/你的用户名/仓库名.git
+git push -u origin main
+```
+
+若提示登录：用 GitHub 的 **Personal Access Token** 作为密码（不要用账号密码）。  
+创建 Token：[github.com/settings/tokens](https://github.com/settings/tokens) → Generate new token → 勾选 `repo`。
+
+### 3. 在 Render 部署
+
+1. 打开 [render.com](https://render.com) 并登录（可用 GitHub 登录）
+2. **New** → **Blueprint**（或 **Web Service** 并连接同一仓库）
+3. 选择刚推送的仓库；若使用 Blueprint，会读取本仓库的 `render.yaml`
+4. 部署完成后会得到 `https://xxx.onrender.com`
+5. 手机浏览器打开该地址 → 菜单里 **添加到主屏幕**（PWA）
+
+### 4. 环境变量（可选）
+
+在 Render 面板为该服务设置：
+
+- `DAILY_RUN_HOUR`（默认 `8`）
+- `DAILY_RUN_MINUTE`（默认 `0`）
+
+### 说明（Render 免费实例）
+
+- 免费 Web 服务在无访问时可能休眠，首次打开会慢几秒。
+- 磁盘非持久化时，SQLite 数据在重装/休眠后可能丢失；域名列表可重新用页面或 `domains_full.txt` 导入。
+
+本仓库已包含 `render.yaml` 与 `Procfile`，按上面推送后即可被 Render 识别。
 
 ## Important note about phone install
 
