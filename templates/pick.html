@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第一步：勾选媒体</title>
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    body { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; margin: 0; background: #f4f6f8; color: #111; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    h1 { margin-top: 0; font-size: 1.35rem; }
+    .muted { color: #555; font-size: 14px; }
+    .flash-error { background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .flash-success { background: #ecfdf5; color: #065f46; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    button, .btnlink { background: #0f172a; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btnlink.secondary { background: #475569; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 10px 8px; vertical-align: top; }
+    .catalog-scroll { max-height: 60vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .catalog-scroll th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+    .nowrap { white-space: nowrap; }
+    .counter { font-weight: bold; margin: 12px 0; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+    .domain-scroll { max-height: 60vh; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; background: #fafafa; }
+    .domain-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .domain-row:last-child { border-bottom: 0; }
+    .domain-row label { flex: 1; cursor: pointer; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>第一步：勾选媒体</h1>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+          <p class="flash-error">{{ message }}</p>
+          {% elif category == 'success' %}
+          <p class="flash-success">{{ message }}</p>
+          {% else %}
+          <p class="muted">{{ message }}</p>
+          {% endif %}
+        {% endfor %}
+      {% endwith %}
+      <p class="muted">一次最多勾选 <strong>{{ max_check }}</strong> 家。勾选完成后点击下方按钮保存，然后回到首页进行第二步。</p>
+      <div class="toolbar">
+        <a class="btnlink secondary" href="{{ url_for('home') }}">返回首页</a>
+        <a class="btnlink secondary" href="{{ url_for('pick_media', clear=1) }}">清空勾选</a>
+      </div>
+
+      {% if media_catalog %}
+      <form id="pick-form" method="post" action="{{ url_for('pick_media') }}" data-checkbox-name="{{ checkbox_name }}">
+        <p class="counter" id="select-counter">已选：0 / {{ max_check }}</p>
+        <div class="catalog-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="nowrap">勾选</th>
+                <th>国家（A 列）</th>
+                <th>媒体名称（B 列）</th>
+                <th>网址（C 列）</th>
+                <th class="nowrap">用于检索的域名</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in media_catalog %}
+              <tr>
+                <td>
+                  <input type="checkbox" name="selected_media_keys" value="{{ item.key|e }}" id="cb-{{ loop.index }}"{% if item.key in last_selected_set %} checked{% endif %}>
+                </td>
+                <td>{{ item.country }}</td>
+                <td>{{ item.name }}</td>
+                <td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.url }}</a></td>
+                <td class="muted">{{ item.domain }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:16px"><button type="submit">保存勾选并返回首页</button></p>
+      </form>
+      {% elif domain_list %}
+      <form id="pick-form" method="post" action="{{ url_for('pick_media') }}" data-checkbox-name="{{ checkbox_name }}">
+        <p class="counter" id="select-counter">已选：0 / {{ max_check }}</p>
+        <div class="domain-scroll">
+          {% for d in domain_list %}
+          <div class="domain-row">
+            <input type="checkbox" name="selected_domains" value="{{ d|e }}" id="cb-{{ loop.index }}"{% if d in last_selected_set %} checked{% endif %}>
+            <label for="cb-{{ loop.index }}">{{ d }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        <p style="margin-top:16px"><button type="submit">保存勾选并返回首页</button></p>
+      </form>
+      {% else %}
+      <p class="muted">没有可勾选的媒体。请将《top story checker media list.xlsx》放在程序同目录，或联系管理员配置目录。</p>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+    (function () {
+      var max = {{ max_check }};
+      var form = document.getElementById("pick-form");
+      if (!form) return;
+      var cn = form.getAttribute("data-checkbox-name") || "selected_domains";
+      var boxes = form.querySelectorAll('input[type="checkbox"][name="' + cn + '"]');
+      var counter = document.getElementById("select-counter");
+      function countChecked() {
+        var n = 0;
+        boxes.forEach(function (b) { if (b.checked) n++; });
+        return n;
+      }
+      function updateCounter() {
+        var n = countChecked();
+        if (counter) counter.textContent = "已选：" + n + " / " + max;
+      }
+      boxes.forEach(function (b) {
+        b.addEventListener("change", function () {
+          if (countChecked() > max) {
+            b.checked = false;
+            alert("一次最多只能勾选 " + max + " 家。");
+          }
+          updateCounter();
+        });
+      });
+      updateCounter();
+      form.addEventListener("submit", function (e) {
+        var n = countChecked();
+        if (n === 0) {
+          e.preventDefault();
+          alert("请至少勾选一家媒体。");
+        }
+        if (n > max) {
+          e.preventDefault();
+          alert("一次最多只能勾选 " + max + " 家。");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第二步：获取头条新闻</title>
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    body { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; margin: 0; background: #f4f6f8; color: #111; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    h1 { margin-top: 0; font-size: 1.35rem; }
+    .muted { color: #555; font-size: 14px; }
+    .flash-error { background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .flash-success { background: #ecfdf5; color: #065f46; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    button, .btnlink { background: #0f172a; color: #fff; border: 0; border-radius: 8px; padding: 12px 20px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 15px; }
+    .btnlink.secondary { background: #475569; }
+    .btnlink.outline { background: #fff; color: #0f172a; border: 2px solid #0f172a; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 10px 8px; vertical-align: top; }
+    .catalog-scroll { max-height: 50vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .catalog-scroll th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+    p.url { font-size: 12px; color: #64748b; word-break: break-all; margin: 4px 0 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>第二步：获取头条新闻</h1>
+      <p class="muted">本页地址：<strong>/step2</strong>。确认下方为当前勾选媒体后，点击按钮提交；实际抓取由 <code>POST /run</code> 完成。</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+          <p class="flash-error">{{ message }}</p>
+          {% elif category == 'success' %}
+          <p class="flash-success">{{ message }}</p>
+          {% else %}
+          <p class="muted">{{ message }}</p>
+          {% endif %}
+        {% endfor %}
+      {% endwith %}
+
+      <h2 style="font-size:1.1rem;margin-top:1rem">当前已选媒体</h2>
+      <div class="catalog-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>国家</th>
+              <th>媒体名称</th>
+              <th>网址</th>
+              <th>检索用域名</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if picked_rows %}
+              {% for item in picked_rows %}
+              <tr>
+                <td>{{ item.country }}</td>
+                <td>{{ item.name }}</td>
+                <td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.url }}</a></td>
+                <td class="muted">{{ item.domain }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              {% for d in picked_domains %}
+              <tr>
+                <td>—</td>
+                <td>—</td>
+                <td><a href="https://{{ d }}" target="_blank" rel="noopener">https://{{ d }}</a></td>
+                <td class="muted">{{ d }}</td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <form method="post" action="{{ url_for('run_now') }}" style="margin-top:20px">
+        <button type="submit">提交并获取头条新闻</button>
+      </form>
+
+      <p style="margin-top:20px">
+        <a class="btnlink secondary" href="{{ url_for('home') }}">返回首页</a>
+        <a class="btnlink outline" href="{{ url_for('pick_media') }}" style="margin-left:8px">修改勾选</a>
+        <a class="btnlink outline" href="{{ url_for('pick_media', clear=1) }}" style="margin-left:8px">清空并重新勾选</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

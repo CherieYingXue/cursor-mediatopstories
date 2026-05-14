@@ -1,6 +1,6 @@
 {
-  "name": "Daily Top Stories Checker",
-  "short_name": "TopStories",
+  "name": "媒体头条查询",
+  "short_name": "头条查询",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f6f8",

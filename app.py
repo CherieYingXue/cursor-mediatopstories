@@ -10,12 +10,23 @@ from urllib.parse import urlparse
 
 import feedparser
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from openpyxl import load_workbook
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "top_stories.db"
 MAX_CHECK_DOMAINS = 10
+SESSION_PICKED_MEDIA_KEYS = "picked_media_keys"
+SESSION_PICKED_DOMAINS = "picked_domains"
 SETTINGS_LAST_SELECTION = "last_selected_domains"
 SETTINGS_LAST_MEDIA_KEYS = "last_selected_media_keys"
 SETTINGS_MEDIA_CATALOG_JSON = "media_catalog_json"
@@ -344,9 +355,9 @@ def format_selection_labels_for_keys(
         item = by_k.get(k)
         if not item:
             continue
-        c = item.get("country") or "—"
+        c = item.get("country") or "未填"
         n = item.get("name") or item.get("domain") or k
-        labels.append(f"{c} — {n}")
+        labels.append(f"{c}：{n}")
     return labels
 
 
@@ -527,6 +538,44 @@ def export_latest_csv() -> Path | None:
     return out_path
 
 
+def _session_picked_media_keys() -> list[str]:
+    raw = session.get(SESSION_PICKED_MEDIA_KEYS)
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for x in raw:
+        k = normalize_catalog_url_key(x)
+        if k and k not in out:
+            out.append(k)
+    return out[:MAX_CHECK_DOMAINS]
+
+
+def _session_picked_domains() -> list[str]:
+    raw = session.get(SESSION_PICKED_DOMAINS)
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for x in raw:
+        d = normalize_one_domain(str(x))
+        if d and d not in out:
+            out.append(d)
+    return out[:MAX_CHECK_DOMAINS]
+
+
+def load_picked_display() -> tuple[list[dict[str, Any]], list[str], bool]:
+    """从会话读取当前勾选，用于首页摘要与第二步页面。"""
+    catalog = get_media_catalog()
+    if catalog:
+        keys = _session_picked_media_keys()
+        if not keys:
+            return [], [], False
+        by_key = catalog_by_key(catalog)
+        rows = [by_key[k] for k in keys if k in by_key]
+        return rows, [], bool(rows)
+    doms = _session_picked_domains()
+    return [], doms, bool(doms)
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()
@@ -535,46 +584,113 @@ def home():
     conn.close()
     schedule_time = f"{os.getenv('DAILY_RUN_HOUR', '08')}:{os.getenv('DAILY_RUN_MINUTE', '00')}"
     catalog = get_media_catalog()
-    domains = get_saved_domains()
+
+    picked_rows, picked_domains, has_pick = load_picked_display()
 
     if catalog:
         keys_eff = get_last_selection_media_keys_effective(catalog)
-        last_selected_set = set(keys_eff)
         last_selection_labels = format_selection_labels_for_keys(keys_eff, catalog)
-        checkbox_name = "selected_media_keys"
         if MEDIA_LIST_XLSX.is_file():
-            xlsx_note = (
-                f"Media catalog: {len(catalog)} row(s) from «{MEDIA_LIST_XLSX.name}» "
-                f"(column A country, B name, C URL)."
+            catalog_hint = (
+                f"已从工作目录读取《{MEDIA_LIST_XLSX.name}》，共 {len(catalog)} 条媒体。"
             )
         else:
-            xlsx_note = (
-                f"Media catalog: {len(catalog)} row(s) from saved cache. "
-                f"Add «{MEDIA_LIST_XLSX.name}» beside the app to read the live file."
+            catalog_hint = (
+                f"当前使用已缓存的媒体目录，共 {len(catalog)} 条。将《{MEDIA_LIST_XLSX.name}》"
+                "放在程序同目录可改为读取本地文件。"
             )
     else:
         last_selection = get_last_selection_effective()
-        last_selected_set = set(last_selection)
         last_selection_labels = last_selection
-        checkbox_name = "selected_domains"
-        xlsx_note = (
-            f"No catalog loaded. Put «{MEDIA_LIST_XLSX.name}» in the app folder "
-            f"(same folder as this program), or use the text list / generic Excel import below."
+        catalog_hint = (
+            f"未找到《{MEDIA_LIST_XLSX.name}》。请将该文件放在程序同目录，"
+            "或在服务器上使用上次缓存的目录。"
         )
 
     return render_template(
         "index.html",
-        default_domains="\n".join(domains),
-        domain_list=domains,
         media_catalog=catalog,
+        picked_rows=picked_rows,
+        picked_domains=picked_domains,
+        has_pick=has_pick,
         max_check=MAX_CHECK_DOMAINS,
         last_selection_labels=last_selection_labels,
-        last_selected_set=last_selected_set,
-        checkbox_name=checkbox_name,
-        xlsx_note=xlsx_note,
         rows=rows,
         last_run=last_run["run_at"] if last_run else None,
         schedule_time=schedule_time,
+        catalog_hint=catalog_hint,
+    )
+
+
+@app.route("/step2", methods=["GET"])
+def step_two():
+    picked_rows, picked_domains, has_pick = load_picked_display()
+    if not has_pick:
+        flash("请先完成第一步：勾选媒体。", "error")
+        return redirect(url_for("home"))
+    return render_template(
+        "step2.html",
+        picked_rows=picked_rows,
+        picked_domains=picked_domains,
+        max_check=MAX_CHECK_DOMAINS,
+    )
+
+
+@app.route("/pick", methods=["GET", "POST"])
+def pick_media():
+    if request.method == "GET" and request.args.get("clear"):
+        session.pop(SESSION_PICKED_MEDIA_KEYS, None)
+        session.pop(SESSION_PICKED_DOMAINS, None)
+        flash("已清空勾选，请重新选择媒体。", "success")
+        return redirect(url_for("pick_media"))
+
+    catalog = get_media_catalog()
+
+    if request.method == "POST":
+        if catalog:
+            by_key = catalog_by_key(catalog)
+            allowed = set(by_key.keys())
+            keys: list[str] = []
+            for s in request.form.getlist("selected_media_keys"):
+                k = normalize_catalog_url_key(s)
+                if k in allowed and k not in keys:
+                    keys.append(k)
+            if not keys:
+                flash("请至少勾选一家媒体。", "error")
+                return redirect(url_for("pick_media"))
+            if len(keys) > MAX_CHECK_DOMAINS:
+                flash(f"一次最多只能勾选 {MAX_CHECK_DOMAINS} 家媒体。", "error")
+                return redirect(url_for("pick_media"))
+            session[SESSION_PICKED_MEDIA_KEYS] = keys
+            session.pop(SESSION_PICKED_DOMAINS, None)
+        else:
+            allowed = set(get_saved_domains())
+            doms: list[str] = []
+            for s in request.form.getlist("selected_domains"):
+                d = normalize_one_domain(s)
+                if d in allowed and d not in doms:
+                    doms.append(d)
+            if not doms:
+                flash("请至少勾选一个域名。", "error")
+                return redirect(url_for("pick_media"))
+            if len(doms) > MAX_CHECK_DOMAINS:
+                flash(f"一次最多只能勾选 {MAX_CHECK_DOMAINS} 个。", "error")
+                return redirect(url_for("pick_media"))
+            session[SESSION_PICKED_DOMAINS] = doms
+            session.pop(SESSION_PICKED_MEDIA_KEYS, None)
+        flash("第一步已完成。请打开「第二步」页面获取头条（地址 /step2）。", "success")
+        return redirect(url_for("home"))
+
+    # GET：展示完整列表供勾选
+    last_keys = set(_session_picked_media_keys()) if catalog else set(_session_picked_domains())
+    dl = get_saved_domains()
+    return render_template(
+        "pick.html",
+        media_catalog=catalog,
+        domain_list=dl if not catalog else [],
+        max_check=MAX_CHECK_DOMAINS,
+        last_selected_set=last_keys,
+        checkbox_name="selected_media_keys" if catalog else "selected_domains",
     )
 
 
@@ -582,39 +698,40 @@ def home():
 def run_now():
     catalog = get_media_catalog()
     if catalog:
+        keys = _session_picked_media_keys()
+        if not keys:
+            flash("请先在「第一步」勾选媒体页面完成选择，再在第二步页面（/step2）获取头条。", "error")
+            return redirect(url_for("pick_media"))
         by_key = catalog_by_key(catalog)
         allowed = set(by_key.keys())
-        keys: list[str] = []
-        for s in request.form.getlist("selected_media_keys"):
-            k = normalize_catalog_url_key(s)
-            if k in allowed and k not in keys:
-                keys.append(k)
+        keys = [k for k in keys if k in allowed]
         if not keys:
-            flash("Please select at least one media site.", "error")
-            return redirect(url_for("home"))
+            flash("当前勾选已失效，请重新勾选媒体。", "error")
+            return redirect(url_for("pick_media"))
         if len(keys) > MAX_CHECK_DOMAINS:
-            flash(f"You can select at most {MAX_CHECK_DOMAINS} sites at a time.", "error")
-            return redirect(url_for("home"))
+            flash(f"一次最多处理 {MAX_CHECK_DOMAINS} 家媒体，请返回第一步勾选页面减少数量。", "error")
+            return redirect(url_for("pick_media"))
         save_last_selection_keys(keys)
         items = [by_key[k] for k in keys if k in by_key]
         run_fetch_for_catalog_items(items)
+        flash("已根据勾选获取头条并更新结果。", "success")
         return redirect(url_for("home"))
 
-    allowed = set(get_saved_domains())
-    selected_raw = request.form.getlist("selected_domains")
-    domains: list[str] = []
-    for s in selected_raw:
-        d = normalize_one_domain(s)
-        if d and d in allowed and d not in domains:
-            domains.append(d)
+    domains = _session_picked_domains()
     if not domains:
-        flash("Please select at least one media site.", "error")
-        return redirect(url_for("home"))
+        flash("请先在「第一步」勾选媒体页面完成选择，再在第二步页面（/step2）获取头条。", "error")
+        return redirect(url_for("pick_media"))
+    allowed = set(get_saved_domains())
+    domains = [d for d in domains if d in allowed]
+    if not domains:
+        flash("当前勾选已失效，请重新勾选。", "error")
+        return redirect(url_for("pick_media"))
     if len(domains) > MAX_CHECK_DOMAINS:
-        flash(f"You can select at most {MAX_CHECK_DOMAINS} sites at a time.", "error")
-        return redirect(url_for("home"))
+        flash(f"一次最多处理 {MAX_CHECK_DOMAINS} 个域名，请返回第一步勾选页面减少数量。", "error")
+        return redirect(url_for("pick_media"))
     save_last_selection(domains)
     run_fetch_for_domains(domains)
+    flash("已根据勾选获取头条并更新结果。", "success")
     return redirect(url_for("home"))
 
 
@@ -631,35 +748,35 @@ def import_domains():
 def import_excel():
     f = request.files.get("excel")
     if not f or not getattr(f, "filename", None):
-        flash("Please choose an Excel file (.xlsx or .xlsm).", "error")
+        flash("请选择 Excel 文件（.xlsx 或 .xlsm）。", "error")
         return redirect(url_for("home"))
     name = f.filename.lower()
     if not (name.endswith(".xlsx") or name.endswith(".xlsm")):
-        flash("Only .xlsx and .xlsm files are supported (not old .xls).", "error")
+        flash("仅支持 .xlsx / .xlsm 格式（不支持旧版 .xls）。", "error")
         return redirect(url_for("home"))
     try:
         data = f.read()
     except Exception as exc:
-        flash(f"Could not read uploaded file: {exc}", "error")
+        flash(f"无法读取上传文件：{exc}", "error")
         return redirect(url_for("home"))
     if len(data) > MAX_EXCEL_BYTES:
-        flash("Excel file is too large (max 15 MB).", "error")
+        flash("Excel 文件过大（上限 15 MB）。", "error")
         return redirect(url_for("home"))
     try:
         from_excel = domains_from_excel_bytes(data)
     except Exception as exc:
-        flash(f"Could not parse Excel: {exc}", "error")
+        flash(f"无法解析 Excel：{exc}", "error")
         return redirect(url_for("home"))
     if not from_excel:
-        flash("No domains or URLs found in the first worksheet.", "error")
+        flash("第一个工作表中没有识别到域名或网址。", "error")
         return redirect(url_for("home"))
     base = get_saved_domains()
     merged = merge_domain_lists(base, from_excel)
     added = len(merged) - len(base)
     save_domains(merged)
     flash(
-        f"Excel import: {added} new site(s) added ({len(from_excel)} unique in file). "
-        f"Total in list: {len(merged)}.",
+        f"已从通用 Excel 合并：新增 {added} 个域名（文件中识别 {len(from_excel)} 个），"
+        f"文本列表合计 {len(merged)} 个。",
         "success",
     )
     return redirect(url_for("home"))
