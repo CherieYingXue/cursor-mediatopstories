@@ -1,5 +1,7 @@
 flask
 feedparser
+requests
+beautifulsoup4
 pyinstaller
 apscheduler
 gunicorn

@@ -6,10 +6,12 @@ import sqlite3
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import feedparser
+import requests
 from apscheduler.schedulers.background import BackgroundScheduler
+from bs4 import BeautifulSoup
 from flask import (
     Flask,
     flash,
@@ -31,12 +33,23 @@ SETTINGS_LAST_SELECTION = "last_selected_domains"
 SETTINGS_LAST_MEDIA_KEYS = "last_selected_media_keys"
 SETTINGS_MEDIA_CATALOG_JSON = "media_catalog_json"
 MEDIA_LIST_XLSX = BASE_DIR / "top story checker media list.xlsx"
-# Google News RSS 等抓取使用移动端 UA，降低被默认爬虫 UA 拦截的概率。
-RSS_REQUEST_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-    ),
+# 模拟安卓端访问：必须用 feedparser 的 agent= 作为唯一 User-Agent。
+# 若只传 request_headers["User-Agent"]，库仍会先加默认 feedparser UA，服务器往往只认第一条。
+# 以下为常见「Android + Chrome Mobile」组合（系统版本与 Chrome 主版本对齐）。
+MOBILE_HTTP_USER_AGENT = (
+    "Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36"
+)
+MOBILE_RSS_EXTRA_HEADERS = {
+    "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Sec-CH-UA": '"Google Chrome";v="133", "Chromium";v="133", "Not_A Brand";v="24"',
+    "Sec-CH-UA-Mobile": "?1",
+    "Sec-CH-UA-Platform": '"Android"',
+    "Sec-CH-UA-Platform-Version": '"15.0.0"',
+}
+MOBILE_PAGE_REQUEST_HEADERS = {
+    "User-Agent": MOBILE_HTTP_USER_AGENT,
+    **MOBILE_RSS_EXTRA_HEADERS,
 }
 MAX_EXCEL_BYTES = 15 * 1024 * 1024
 MAX_EXCEL_ROWS = 8000
@@ -227,19 +240,19 @@ def canonical_display_url(url_raw: str) -> str:
 
 
 def load_media_catalog_from_path(path: Path) -> list[dict[str, Any]]:
-    """Read sheet 1: column A country, B media name, C URL (one row per outlet)."""
+    """Read sheet 1: A 国家, B 媒体名, C 网址; 可选 D 手机版首页, E 头条 CSS 选择器（D+E 都有则优先抓手机站）。"""
     wb = load_workbook(path, read_only=True, data_only=True)
     out: list[dict[str, Any]] = []
     seen_keys: set[str] = set()
     try:
         ws = wb.worksheets[0]
         for idx, row in enumerate(
-            ws.iter_rows(min_row=1, max_col=3, values_only=True), start=1
+            ws.iter_rows(min_row=1, max_col=5, values_only=True), start=1
         ):
             if idx > MAX_EXCEL_ROWS:
                 break
-            cells = (list(row) + [None, None, None])[:3]
-            a, b, c = cells[0], cells[1], cells[2]
+            cells = (list(row) + [None, None, None, None, None])[:5]
+            a, b, c, d, e = cells[0], cells[1], cells[2], cells[3], cells[4]
             country = "" if a is None else str(a).strip()
             name = "" if b is None else str(b).strip()
             url_raw = normalize_catalog_url_key(c)
@@ -259,15 +272,20 @@ def load_media_catalog_from_path(path: Path) -> list[dict[str, Any]]:
             if key in seen_keys:
                 continue
             seen_keys.add(key)
-            out.append(
-                {
-                    "country": country,
-                    "name": name,
-                    "url": canonical_display_url(url_raw),
-                    "domain": domain,
-                    "key": key,
-                }
-            )
+            m_url_raw = normalize_catalog_url_key(d)
+            headline_sel = "" if e is None else str(e).strip()
+            m_url = canonical_display_url(m_url_raw) if m_url_raw else ""
+            entry: dict[str, Any] = {
+                "country": country,
+                "name": name,
+                "url": canonical_display_url(url_raw),
+                "domain": domain,
+                "key": key,
+            }
+            if m_url and headline_sel and urlparse(m_url).scheme in ("http", "https"):
+                entry["m_url"] = m_url
+                entry["headline_selector"] = headline_sel
+            out.append(entry)
     finally:
         wb.close()
     return out
@@ -414,7 +432,11 @@ def google_news_rss_for_domain(domain: str) -> str:
 
 def fetch_top_story(domain: str) -> dict:
     rss_url = google_news_rss_for_domain(domain)
-    feed = feedparser.parse(rss_url, request_headers=RSS_REQUEST_HEADERS)
+    feed = feedparser.parse(
+        rss_url,
+        agent=MOBILE_HTTP_USER_AGENT,
+        request_headers=MOBILE_RSS_EXTRA_HEADERS,
+    )
     if feed.entries:
         top = feed.entries[0]
         return {
@@ -431,7 +453,58 @@ def fetch_top_story(domain: str) -> dict:
     }
 
 
+def fetch_headline_from_mobile_homepage(
+    news_site_m_url: str,
+    headline_selector: str,
+    domain: str,
+) -> dict[str, Any] | None:
+    """请求手机版首页，用 CSS 选择器定位头条区域，取区域内第一个 <a> 的文案与链接。"""
+    try:
+        parsed = urlparse(news_site_m_url)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return None
+        resp = requests.get(
+            news_site_m_url,
+            headers=MOBILE_PAGE_REQUEST_HEADERS,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        nodes = soup.select(headline_selector)
+        if not nodes:
+            return None
+        headline = nodes[0]
+        a_tag = headline.find("a")
+        if not a_tag:
+            return None
+        title = a_tag.get_text(strip=True)
+        link = (a_tag.get("href") or "").strip()
+        if not title or not link:
+            return None
+        if link.startswith("/"):
+            link = urljoin(news_site_m_url, link)
+        return {
+            "domain": domain,
+            "title": title,
+            "link": link,
+            "source": "媒体手机版官网头条",
+        }
+    except Exception:
+        return None
+
+
 def fetch_top_story_for_catalog_item(item: dict[str, Any]) -> dict[str, Any]:
+    m_url = (item.get("m_url") or "").strip()
+    sel = (item.get("headline_selector") or "").strip()
+    if m_url and sel:
+        scraped = fetch_headline_from_mobile_homepage(m_url, sel, item["domain"])
+        if scraped:
+            return {
+                **scraped,
+                "country": item.get("country") or "",
+                "media_name": item.get("name") or "",
+                "media_url": item.get("url") or "",
+            }
     base = fetch_top_story(item["domain"])
     return {
         **base,
