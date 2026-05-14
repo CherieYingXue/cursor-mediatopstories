@@ -8,63 +8,155 @@
   <link rel="manifest" href="/static/manifest.webmanifest">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; color: #111; }
-    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
     h1 { margin-top: 0; }
-    textarea { width: 100%; min-height: 180px; font-family: Consolas, monospace; }
+    h2 { font-size: 1.1rem; margin-top: 1.25rem; }
+    textarea { width: 100%; min-height: 160px; font-family: Consolas, monospace; box-sizing: border-box; }
     button { background: #0f172a; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 10px 8px; vertical-align: top; }
     .muted { color: #555; font-size: 14px; }
+    .flash-error { background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .flash-success { background: #ecfdf5; color: #065f46; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .domain-scroll { max-height: 320px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; background: #fafafa; }
+    .domain-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .domain-row:last-child { border-bottom: 0; }
+    .domain-row label { flex: 1; cursor: pointer; word-break: break-all; }
+    .counter { font-weight: bold; margin: 8px 0; }
+    .catalog-scroll { max-height: 420px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .catalog-scroll th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+    .nowrap { white-space: nowrap; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Daily Top Stories Checker</h1>
-      <p class="muted">Paste one domain per line, then click "Check Top Stories Now".</p>
-      <p class="muted">Daily auto-run time (server local time): {{ schedule_time }}</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+          <p class="flash-error">{{ message }}</p>
+          {% elif category == 'success' %}
+          <p class="flash-success">{{ message }}</p>
+          {% else %}
+          <p class="muted">{{ message }}</p>
+          {% endif %}
+        {% endfor %}
+      {% endwith %}
+      <p class="muted">{{ xlsx_note }}</p>
+      <p class="muted">Daily auto-run (server local time): <strong>{{ schedule_time }}</strong> — same outlets as your <strong>last manual</strong> “Check Top Stories Now” (max {{ max_check }}), still in the current catalog or domain list.</p>
+      {% if last_selection_labels %}
+      <p class="muted">Remembered for schedule: <strong>{{ last_selection_labels | join(", ") }}</strong></p>
+      {% else %}
+      <p class="muted">No remembered selection yet — run “Check Top Stories Now” once to set what the daily job will fetch.</p>
+      {% endif %}
       {% if last_run %}
       <p class="muted">Last run: {{ last_run }}</p>
       {% endif %}
-      <form method="post" action="/run">
-        <textarea name="domains">{{ default_domains }}</textarea>
-        <p><button type="submit">Check Top Stories Now</button></p>
-      </form>
+
+      <h2>Media list (edit / import)</h2>
+      <p class="muted">Fallback text list (one domain per line). When the Excel catalog is loaded, use the table below to pick outlets; this box is optional.</p>
       <form method="post" action="/import">
-        <textarea name="domains" placeholder="Import domains (one per line)"></textarea>
-        <p><button type="submit">Save Domain List Only</button></p>
+        <textarea name="domains" placeholder="Paste domains, one per line">{{ default_domains }}</textarea>
+        <p><button type="submit">Save Domain List</button></p>
       </form>
-      <p class="muted">Export saved domain list: <a href="/export-domains" target="_blank">/export-domains</a></p>
+      <p class="muted">Export saved text list: <a href="/export-domains" target="_blank">/export-domains</a></p>
+
+      <h2>Import from Excel (generic)</h2>
+      <p class="muted">Upload <strong>.xlsx</strong> / <strong>.xlsm</strong> to merge domains into the text list above (any layout). For the fixed media catalog, use file <strong>top story checker media list.xlsx</strong> in the app folder.</p>
+      <form method="post" action="/import-excel" enctype="multipart/form-data">
+        <input type="file" name="excel" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12">
+        <p><button type="submit">Add media from Excel</button></p>
+      </form>
+
+      <h2>Select media to check (max {{ max_check }})</h2>
+      <p class="muted">Only checked rows are fetched. Your choice is remembered for the next visit and for the daily job.</p>
+      {% if media_catalog %}
+      <form id="run-form" method="post" action="/run" data-checkbox-name="{{ checkbox_name }}">
+        <p class="counter" id="select-counter">Selected: 0 / {{ max_check }}</p>
+        <div class="catalog-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="nowrap">Check</th>
+                <th>Country (A)</th>
+                <th>Media name (B)</th>
+                <th>URL (C)</th>
+                <th class="nowrap">RSS domain</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in media_catalog %}
+              <tr>
+                <td>
+                  <input type="checkbox" name="selected_media_keys" value="{{ item.key|e }}" id="cb-{{ loop.index }}"{% if item.key in last_selected_set %} checked{% endif %}>
+                </td>
+                <td>{{ item.country }}</td>
+                <td>{{ item.name }}</td>
+                <td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.url }}</a></td>
+                <td class="muted">{{ item.domain }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p><button type="submit" id="run-btn">Check Top Stories Now</button></p>
+      </form>
+      {% elif domain_list %}
+      <form id="run-form" method="post" action="/run" data-checkbox-name="{{ checkbox_name }}">
+        <p class="counter" id="select-counter">Selected: 0 / {{ max_check }}</p>
+        <div class="domain-scroll">
+          {% for d in domain_list %}
+          <div class="domain-row">
+            <input type="checkbox" name="selected_domains" value="{{ d|e }}" id="cb-{{ loop.index }}"{% if d in last_selected_set %} checked{% endif %}>
+            <label for="cb-{{ loop.index }}">{{ d }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        <p><button type="submit" id="run-btn">Check Top Stories Now</button></p>
+      </form>
+      {% else %}
+      <p class="muted">No media list yet. Add the Excel catalog file or save a domain list above.</p>
+      {% endif %}
     </div>
 
     <div class="card">
       <h2>Latest Results</h2>
       {% if rows %}
-      <table>
-        <thead>
-          <tr>
-            <th>Domain</th>
-            <th>Top Story</th>
-            <th>Link</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ r["domain"] }}</td>
-            <td>{{ r["title"] }}</td>
-            <td>
-              {% if r["link"] %}
-              <a href="{{ r['link'] }}" target="_blank">Open</a>
-              {% else %}
-              N/A
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="catalog-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th>Media</th>
+              <th>Media URL</th>
+              <th>Domain (search)</th>
+              <th>Top story</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td>{{ r["country"] or "—" }}</td>
+              <td>{{ r["media_name"] or "—" }}</td>
+              <td>{% if r["media_url"] %}<a href="{{ r['media_url'] }}" target="_blank" rel="noopener">open</a>{% else %}—{% endif %}</td>
+              <td>{{ r["domain"] }}</td>
+              <td>{{ r["title"] }}</td>
+              <td>
+                {% if r["link"] %}
+                <a href="{{ r['link'] }}" target="_blank" rel="noopener">Open</a>
+                {% else %}
+                N/A
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
       <p class="muted">No data yet. Run a check first.</p>
       {% endif %}
@@ -72,8 +164,47 @@
   </div>
 
   <script>
+    (function () {
+      var max = {{ max_check }};
+      var form = document.getElementById("run-form");
+      if (!form) return;
+      var checkboxName = form.getAttribute("data-checkbox-name") || "selected_domains";
+      var boxes = form.querySelectorAll('input[type="checkbox"][name="' + checkboxName + '"]');
+      var counter = document.getElementById("select-counter");
+      function countChecked() {
+        var n = 0;
+        boxes.forEach(function (b) { if (b.checked) n++; });
+        return n;
+      }
+      function updateCounter() {
+        var n = countChecked();
+        if (counter) counter.textContent = "Selected: " + n + " / " + max;
+      }
+      boxes.forEach(function (b) {
+        b.addEventListener("change", function () {
+          if (countChecked() > max) {
+            b.checked = false;
+            alert("You can select at most " + max + " sites at a time.");
+          }
+          updateCounter();
+        });
+      });
+      updateCounter();
+      form.addEventListener("submit", function (e) {
+        var n = countChecked();
+        if (n === 0) {
+          e.preventDefault();
+          alert("Please select at least one media site.");
+          return;
+        }
+        if (n > max) {
+          e.preventDefault();
+          alert("You can select at most " + max + " sites at a time.");
+        }
+      });
+    })();
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+      navigator.serviceWorker.register("/static/sw.js").catch(function () {});
     }
   </script>
 </body>

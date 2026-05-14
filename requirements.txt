@@ -3,3 +3,4 @@ feedparser
 pyinstaller
 apscheduler
 gunicorn
+openpyxl

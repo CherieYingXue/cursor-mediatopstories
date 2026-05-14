@@ -4,12 +4,12 @@ This app checks top stories for a list of news domains and stores the latest res
 
 ## What it does
 
-- Accepts one website domain per line.
+- Optional **media catalog** from `top story checker media list.xlsx` in the app folder: column **A = country**, **B = media name**, **C = URL**; the list and results show country and name; top story still uses Google News RSS by hostname from the URL.
 - Fetches each domain's top story via Google News RSS (`site:domain`).
 - Saves each run to a SQLite database.
 - Exports latest run to `exports/top_stories_*.csv`.
 - Saves your custom domain list for reuse.
-- Supports domain list import/export.
+- Supports domain list import/export and **merging domains from an Excel file** (`.xlsx` / `.xlsm`).
 - Runs automatic daily checks on a schedule.
 - Shows a mobile-friendly web page.
 - Supports "Add to Home Screen" as a basic PWA.
@@ -39,6 +39,8 @@ What it does:
 
 ## Daily schedule
 
+- Each manual run checks **at most 10** domains you select with checkboxes. That selection is **remembered** for the next page load and for the **daily scheduled** run.
+- The scheduled job runs **only** those remembered domains (still present in your saved media list). If you have not run “Check Top Stories Now” yet, the daily job does nothing until you do.
 - Default run time is `08:00` (server local time).
 - Change it with environment variables:
   - `DAILY_RUN_HOUR` (0-23)
@@ -52,7 +54,8 @@ Example:
 ## Import/export domain list
 
 - In UI:
-  - Use **Save Domain List Only** to save a large domain list without running.
+  - Use **Save Domain List** to save the full list from the textarea (without running a check).
+  - Use **Add media from Excel** to upload `.xlsx` or `.xlsm`: the first worksheet is scanned; URLs and domains are merged into the saved list (duplicates skipped).
 - API/helper endpoint:
   - `GET /export-domains` writes `exports/domains_latest.txt`
 
