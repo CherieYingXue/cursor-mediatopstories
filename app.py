@@ -31,6 +31,13 @@ SETTINGS_LAST_SELECTION = "last_selected_domains"
 SETTINGS_LAST_MEDIA_KEYS = "last_selected_media_keys"
 SETTINGS_MEDIA_CATALOG_JSON = "media_catalog_json"
 MEDIA_LIST_XLSX = BASE_DIR / "top story checker media list.xlsx"
+# Google News RSS 等抓取使用移动端 UA，降低被默认爬虫 UA 拦截的概率。
+RSS_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+    ),
+}
 MAX_EXCEL_BYTES = 15 * 1024 * 1024
 MAX_EXCEL_ROWS = 8000
 DEFAULT_DOMAINS = [
@@ -407,7 +414,7 @@ def google_news_rss_for_domain(domain: str) -> str:
 
 def fetch_top_story(domain: str) -> dict:
     rss_url = google_news_rss_for_domain(domain)
-    feed = feedparser.parse(rss_url)
+    feed = feedparser.parse(rss_url, request_headers=RSS_REQUEST_HEADERS)
     if feed.entries:
         top = feed.entries[0]
         return {
