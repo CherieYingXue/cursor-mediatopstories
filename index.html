@@ -254,7 +254,7 @@
       go(dx < 0 ? 1 : -1);
     }, { passive: true });
 
-    fetch("zoology_cards_data.json")
+    fetch("/static/zoology_cards_data.json")
       .then(r => r.json())
       .then(json => {
         data = json;
