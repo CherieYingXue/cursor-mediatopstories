@@ -254,7 +254,10 @@
       go(dx < 0 ? 1 : -1);
     }, { passive: true });
 
-    fetch("/static/zoology_cards_data.json")
+    const dataUrl = location.pathname.endsWith("/cards")
+      ? "/static/zoology_cards_data.json"
+      : "zoology_cards_data.json";
+    fetch(dataUrl)
       .then(r => r.json())
       .then(json => {
         data = json;
