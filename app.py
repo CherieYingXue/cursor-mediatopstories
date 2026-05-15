@@ -656,6 +656,14 @@ def load_picked_display() -> tuple[list[dict[str, Any]], list[str], bool]:
     return [], doms, bool(doms)
 
 
+@app.route("/cards")
+def knowledge_cards():
+    """Mobile-friendly zoology knowledge cards."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "zoology-cards.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

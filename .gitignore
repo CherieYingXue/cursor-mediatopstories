@@ -8,3 +8,6 @@ python-3.11.9-amd64.exe
 Git-64-bit.exe
 Git-2.54.0-64-bit.exe
 ~$*
+*.docx
+list of media.xlsx
+static/zoology_cards_extracted.json
