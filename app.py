@@ -680,6 +680,14 @@ def micro_ibo_quiz():
     return send_from_directory(BASE_DIR / "static", "micro-ibo-quiz.html")
 
 
+@app.route("/daily-IBO-test")
+def daily_ibo_test():
+    """Mobile-friendly daily IBO simulation test."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "daily-IBO-test.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

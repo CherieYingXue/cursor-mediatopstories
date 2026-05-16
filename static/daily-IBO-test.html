@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d4ed8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>daily-IBO-test</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: #111827;
+      --panel2: #0f172a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+      --accent2: #2563eb;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: rgba(96, 165, 250, .24);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(37, 99, 235, .28), transparent 30%),
+        radial-gradient(circle at 90% 8%, rgba(14, 165, 233, .16), transparent 28%),
+        linear-gradient(180deg, #08111f 0%, #020617 100%);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 12px 16px 10px;
+      background: rgba(8, 17, 31, .94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0; font-size: 1.1rem; letter-spacing: .01em; }
+    header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: .76rem;
+    }
+    .sheet {
+      position: sticky;
+      top: 65px;
+      z-index: 15;
+      padding: 10px 16px;
+      background: rgba(8, 17, 31, .9);
+      border-bottom: 1px solid rgba(96, 165, 250, .14);
+      backdrop-filter: blur(12px);
+    }
+    .sheet-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: .76rem;
+      margin-bottom: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .bubble {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: #bfdbfe;
+      background: rgba(15, 23, 42, .78);
+      text-decoration: none;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .bubble.answered { background: rgba(37, 99, 235, .55); color: #fff; }
+    main { padding: 14px 16px calc(30px + var(--safe-bottom)); }
+    .question {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      margin: 0 0 14px;
+      background: linear-gradient(155deg, rgba(17, 24, 39, .98), rgba(15, 23, 42, .98));
+      box-shadow: 0 20px 52px rgba(0, 0, 0, .26);
+      scroll-margin-top: 150px;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .74rem;
+      margin-bottom: 10px;
+    }
+    .tag {
+      color: #dbeafe;
+      border: 1px solid rgba(96, 165, 250, .36);
+      background: rgba(37, 99, 235, .2);
+      border-radius: 999px;
+      padding: 4px 9px;
+    }
+    h2 {
+      margin: 0 0 11px;
+      font-size: 1.04rem;
+      line-height: 1.5;
+    }
+    .stem {
+      margin: 0 0 12px;
+      color: #e5e7eb;
+      line-height: 1.72;
+      font-size: .95rem;
+    }
+    .options {
+      display: grid;
+      gap: 9px;
+      margin-bottom: 13px;
+    }
+    .option {
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: 14px;
+      padding: 11px 12px;
+      color: #dbeafe;
+      background: rgba(2, 6, 23, .38);
+      line-height: 1.55;
+      font-size: .91rem;
+    }
+    .option b {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5em;
+      height: 1.5em;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: rgba(96, 165, 250, .18);
+      color: #bfdbfe;
+      font-size: .78rem;
+    }
+    .option.selected { border-color: var(--accent); background: rgba(37, 99, 235, .32); }
+    .option.correct { border-color: rgba(34, 197, 94, .7); background: rgba(34, 197, 94, .16); }
+    .option.wrong { border-color: rgba(239, 68, 68, .7); background: rgba(239, 68, 68, .14); }
+    .answer {
+      border: 1px solid rgba(34, 197, 94, .28);
+      border-radius: 16px;
+      padding: 13px;
+      background: rgba(5, 46, 22, .24);
+    }
+    .answer h3 {
+      margin: 0 0 8px;
+      color: #bbf7d0;
+      font-size: .98rem;
+    }
+    .answer p, .answer li {
+      color: #d1d5db;
+      line-height: 1.65;
+      font-size: .88rem;
+    }
+    .answer p { margin: 0 0 8px; }
+    .answer ul { margin: 0; padding-left: 1.1em; }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 18px;
+    }
+    .toolbar button {
+      flex: 1;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 10px;
+      color: white;
+      background: var(--accent2);
+      font-weight: 800;
+      font-size: .92rem;
+    }
+    .toolbar button.secondary { background: #334155; }
+    @media (max-width: 360px) {
+      .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .sheet { top: 78px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>daily-IBO-test</h1>
+    <p>最难档 IBO 仿真综合卷：分子与细胞、遗传进化、植物与动物生理、生态实验推理。每题作答后仍可立即查看详解。</p>
+  </header>
+
+  <section class="sheet" aria-label="答题卡">
+    <div class="sheet-head">
+      <span>答题卡：<strong id="answeredCount">0</strong>/16</span>
+      <span id="scoreText">已选答案会自动保存</span>
+    </div>
+    <div class="grid" id="answerGrid"></div>
+  </section>
+
+  <main>
+    <section class="question" id="q1" data-q="1" data-answer="C">
+      <div class="meta"><span class="tag">细胞信号 · 定量推理</span><span>1 / 16</span></div>
+      <h2>1. GPCR 脱敏与信号放大</h2>
+      <p class="stem">某激素通过 Gs 偶联受体激活腺苷酸环化酶。短时刺激后 cAMP 剧增；持续刺激 30 min 后，即使激素仍存在，cAMP 产生速率下降。加入 PKA 抑制剂只能部分恢复，加入 β-arrestin 缺失突变则显著恢复。下列解释最合理的是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>受体一定发生不可逆变性，因而所有恢复都不可能</button>
+        <button class="option" data-choice="B"><b>B</b>cAMP 下降只能由磷酸二酯酶完全解释，与受体状态无关</button>
+        <button class="option" data-choice="C"><b>C</b>受体磷酸化和 β-arrestin 介导内吞共同造成同源脱敏，PKA 可能参与异源脱敏</button>
+        <button class="option" data-choice="D"><b>D</b>Gs 蛋白被激素直接降解，且 β-arrestin 只负责激活核糖体</button>
+      </div>
+      <div class="answer">
+        <h3>答案：C</h3>
+        <p>持续刺激 GPCR 后常出现脱敏：GRK 磷酸化激活态受体，β-arrestin 结合并阻断 G 蛋白偶联，同时促进受体内吞。PKA 抑制剂只能部分恢复，说明 PKA 反馈磷酸化可能存在，但不是主效应。</p>
+        <ul>
+          <li>A 错：脱敏常可逆，不等于不可逆变性。</li>
+          <li>B 错：PDE 可降解 cAMP，但 β-arrestin 缺失显著恢复说明受体层面很关键。</li>
+          <li>D 错：激素不直接降解 Gs；β-arrestin 的经典作用是受体脱敏/内吞与信号支架。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q2" data-q="2" data-answer="B">
+      <div class="meta"><span class="tag">代谢 · 同位素示踪</span><span>2 / 16</span></div>
+      <h2>2. 13C 标记葡萄糖的去向</h2>
+      <p class="stem">细胞在缺氧条件下加入 [1-13C] 葡萄糖。若糖酵解后丙酮酸主要还原为乳酸，下列关于乳酸标记位置的判断最合理的是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>13C 主要出现在乳酸羧基碳，因为葡萄糖 C1 经糖酵解成为丙酮酸 C1</button>
+        <button class="option" data-choice="B"><b>B</b>13C 主要出现在乳酸甲基碳，因为葡萄糖 C1/C6 对称裂解后对应丙酮酸 C3</button>
+        <button class="option" data-choice="C"><b>C</b>13C 会全部释放为 CO2，因此乳酸无标记</button>
+        <button class="option" data-choice="D"><b>D</b>13C 只进入 NADH，不进入碳骨架</button>
+      </div>
+      <div class="answer">
+        <h3>答案：B</h3>
+        <p>糖酵解中果糖-1,6-二磷酸裂解并经三碳糖异构化，葡萄糖 C1 和 C6 最终对应丙酮酸 C3。乳酸脱氢酶还原丙酮酸不改变碳骨架，丙酮酸 C3 成为乳酸甲基碳。</p>
+        <ul>
+          <li>A 是常见陷阱：葡萄糖 C1 不对应丙酮酸羧基碳。</li>
+          <li>C 错：无氧乳酸发酵不经丙酮酸脱羧释放 CO2。</li>
+          <li>D 错：同位素标记追踪的是碳骨架，不是还原当量本身。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q3" data-q="3" data-answer="A">
+      <div class="meta"><span class="tag">遗传 · 三点测交</span><span>3 / 16</span></div>
+      <h2>3. 基因顺序判断</h2>
+      <p class="stem">三基因测交子代中，两类最多的是 ABC 与 abc；两类最少的是 AbC 与 aBc。若只考虑无双交换干扰之外的常规三点作图，哪一个基因位于中间？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>B</button>
+        <button class="option" data-choice="B"><b>B</b>A</button>
+        <button class="option" data-choice="C"><b>C</b>C</button>
+        <button class="option" data-choice="D"><b>D</b>无法判断，因为双交换类一定最多</button>
+      </div>
+      <div class="answer">
+        <h3>答案：A</h3>
+        <p>亲本型为 ABC / abc。双交换型与亲本型相比，只有中间基因的等位状态发生“翻转”。最少两类 AbC / aBc 与亲本相比只有 B 改变，因此 B 位于中间。</p>
+        <ul>
+          <li>三点作图核心：最大类是亲本型，最小类是双交换型。</li>
+          <li>比较亲本型与双交换型，唯一不同的位点即中间基因。</li>
+          <li>D 错：双交换概率最低，通常数量最少。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q4" data-q="4" data-answer="D">
+      <div class="meta"><span class="tag">群体遗传 · 选择</span><span>4 / 16</span></div>
+      <h2>4. 平衡多态</h2>
+      <p class="stem">某位点 A/a 中，AA 相对适合度 0.8，Aa 为 1.0，aa 为 0.6。若随机交配且只考虑该位点选择，长期预期是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>A 必定固定，因为 AA 适合度高于 aa</button>
+        <button class="option" data-choice="B"><b>B</b>a 必定固定，因为 aa 适合度最低会诱发补偿突变</button>
+        <button class="option" data-choice="C"><b>C</b>两个等位基因都会消失，只剩杂合子</button>
+        <button class="option" data-choice="D"><b>D</b>杂合优势维持稳定多态，平衡频率取决于两个纯合子的选择劣势</button>
+      </div>
+      <div class="answer">
+        <h3>答案：D</h3>
+        <p>杂合子适合度最高，属于超显性/杂合优势，会维持两个等位基因的稳定平衡。若 AA 劣势 s=0.2，aa 劣势 t=0.4，则 A 的平衡频率约 t/(s+t)=0.4/0.6=2/3。</p>
+        <ul>
+          <li>纯合子都低于杂合子时，不会简单固定某一等位基因。</li>
+          <li>“只剩杂合子”不可能由孟德尔分离在随机交配下长期实现。</li>
+          <li>这是镰刀型贫血等经典平衡选择模型的抽象形式。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q5" data-q="5" data-answer="B">
+      <div class="meta"><span class="tag">发育 · 形态发生素</span><span>5 / 16</span></div>
+      <h2>5. 阈值模型</h2>
+      <p class="stem">某胚胎前后轴由形态发生素 X 梯度指定。基因 h1 需高 X 才表达，h2 需中等 X，h3 在低 X 区表达。若 X 的降解速率降低而产生更平缓且整体更高的梯度，最可能的图式变化是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>h1 区域缩小，h3 区域扩大</button>
+        <button class="option" data-choice="B"><b>B</b>高/中阈值表达域向低 X 端扩展，低 X 指定区域可能被压缩</button>
+        <button class="option" data-choice="C"><b>C</b>所有基因表达完全不变，因为阈值模型不受浓度影响</button>
+        <button class="option" data-choice="D"><b>D</b>只有 h3 扩大，因为低浓度总是优先被读取</button>
+      </div>
+      <div class="answer">
+        <h3>答案：B</h3>
+        <p>形态发生素通过浓度阈值指定细胞命运。若降解降低，远端细胞也暴露于更高浓度，高阈值和中阈值表达域可向远端扩展，原低浓度区域被压缩。</p>
+        <ul>
+          <li>阈值模型的关键就是“细胞读出局部浓度”。</li>
+          <li>若梯度形状改变，边界位置会移动。</li>
+          <li>该题考的是定性预测，而不是具体分子名称。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q6" data-q="6" data-answer="C">
+      <div class="meta"><span class="tag">植物生理 · 水势</span><span>6 / 16</span></div>
+      <h2>6. 气孔关闭与水势分量</h2>
+      <p class="stem">干旱时 ABA 升高导致保卫细胞失水、气孔关闭。下列对水势变化的描述最符合机制？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>ABA 使保卫细胞主动积累 K+，水势降低，气孔打开</button>
+        <button class="option" data-choice="B"><b>B</b>ABA 只改变细胞壁颜色，不影响离子通道</button>
+        <button class="option" data-choice="C"><b>C</b>ABA 促进阴离子外流和 K+ 外流，保卫细胞溶质减少，水势升高并失水</button>
+        <button class="option" data-choice="D"><b>D</b>气孔关闭要求保卫细胞吸水膨胀到最大</button>
+      </div>
+      <div class="answer">
+        <h3>答案：C</h3>
+        <p>ABA 信号可引发胞质 Ca2+ 等变化，激活阴离子通道，膜去极化后促进 K+ 外流。溶质减少使保卫细胞水势相对升高，水外流，膨压下降，气孔关闭。</p>
+        <ul>
+          <li>A 是气孔打开时常见离子变化方向。</li>
+          <li>保卫细胞膨压高通常对应气孔张开。</li>
+          <li>气孔调节涉及信号转导、离子通道和水势耦合。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q7" data-q="7" data-answer="A">
+      <div class="meta"><span class="tag">植物光合 · C4/CAM</span><span>7 / 16</span></div>
+      <h2>7. 碳固定策略判别</h2>
+      <p class="stem">某植物夜间气孔开放、苹果酸在液泡中积累，白天气孔关闭但 Calvin 循环仍进行。最合理的判断是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>CAM 植物，时间上分离初始 CO2 固定与 Calvin 循环</button>
+        <button class="option" data-choice="B"><b>B</b>C4 植物，空间上完全不需要束鞘细胞</button>
+        <button class="option" data-choice="C"><b>C</b>C3 植物，夜间 Rubisco 直接大量固定 CO2</button>
+        <button class="option" data-choice="D"><b>D</b>非光合植物，因为白天气孔关闭就不能有 CO2 来源</button>
+      </div>
+      <div class="answer">
+        <h3>答案：A</h3>
+        <p>CAM 植物夜间开放气孔，由 PEPC 初始固定 CO2 为有机酸并储存；白天关闭气孔降低失水，有机酸脱羧供 Calvin 循环使用。</p>
+        <ul>
+          <li>C4 是空间分离，典型涉及叶肉细胞与束鞘细胞。</li>
+          <li>CAM 是时间分离，适应干旱环境。</li>
+          <li>白天气孔关闭不等于 Calvin 循环无 CO2，因为储存酸可脱羧供给。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q8" data-q="8" data-answer="D">
+      <div class="meta"><span class="tag">神经生理 · 电化学梯度</span><span>8 / 16</span></div>
+      <h2>8. 抑制性突触的反转电位</h2>
+      <p class="stem">某神经元静息电位 -65 mV，Cl- 反转电位 -72 mV。GABA_A 受体开放时，最直接的效应是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>膜电位必然去极化到 0 mV 并触发动作电位</button>
+        <button class="option" data-choice="B"><b>B</b>Cl- 外流使膜电位更正</button>
+        <button class="option" data-choice="C"><b>C</b>Na+ 大量内流，形成兴奋性突触后电位</button>
+        <button class="option" data-choice="D"><b>D</b>膜电位趋向 -72 mV，产生超极化或分流抑制</button>
+      </div>
+      <div class="answer">
+        <h3>答案：D</h3>
+        <p>配体门控 Cl- 通道开放后，膜电位趋向 Cl- 的反转电位。由于 -72 mV 比静息电位更负，可产生超极化；即便反转电位接近静息，也可通过增加膜电导产生分流抑制。</p>
+        <ul>
+          <li>离子通道效应由反转电位与当前膜电位的关系决定。</li>
+          <li>GABA_A 主要是 Cl- 通道，不是 Na+ 兴奋性通道。</li>
+          <li>发育早期若细胞内 Cl- 高，GABA 可能去极化，这是另一种情境。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q9" data-q="9" data-answer="B">
+      <div class="meta"><span class="tag">循环生理 · Frank-Starling</span><span>9 / 16</span></div>
+      <h2>9. 静脉回流增加</h2>
+      <p class="stem">短时间内静脉回流增加，心肌交感兴奋不变。根据 Frank-Starling 机制，最先预期出现的是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>舒张末期容积增加，肌节初长度增加，搏出量增加</button>
+        <button class="option" data-choice="B"><b>B</b>舒张末期容积减少，搏出量增加</button>
+        <button class="option" data-choice="C"><b>C</b>心肌细胞动作电位立即消失</button>
+        <button class="option" data-choice="D"><b>D</b>心脏不可能在无交感变化时改变搏出量</button>
+      </div>
+      <div class="answer">
+        <h3>答案：A</h3>
+        <p>静脉回流增加提高前负荷，使舒张末期容积和心肌纤维初长度增加，在生理范围内增强横桥形成与收缩力，搏出量增加。</p>
+        <ul>
+          <li>该机制是心脏内在调节，不依赖交感兴奋变化。</li>
+          <li>过度牵拉会降低效率，但正常范围内前负荷增加提高搏出量。</li>
+          <li>B 把舒张末期容积方向写反。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q10" data-q="10" data-answer="C">
+      <div class="meta"><span class="tag">免疫 · 克隆选择</span><span>10 / 16</span></div>
+      <h2>10. 亲和力成熟</h2>
+      <p class="stem">二次免疫应答中抗体平均亲和力高于初次应答。最直接的细胞与分子机制是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>红细胞发生 V(D)J 重排并分泌 IgE</button>
+        <button class="option" data-choice="B"><b>B</b>T 细胞在线粒体中直接编辑抗体可变区</button>
+        <button class="option" data-choice="C"><b>C</b>生发中心 B 细胞体细胞高频突变，并由抗原和 Tfh 信号选择高亲和力克隆</button>
+        <button class="option" data-choice="D"><b>D</b>补体 C3b 把所有低亲和力抗体化学转化为高亲和力抗体</button>
+      </div>
+      <div class="answer">
+        <h3>答案：C</h3>
+        <p>亲和力成熟发生在生发中心。B 细胞抗体可变区经历 AID 介导的体细胞高频突变，高亲和力克隆更有效获取抗原并获得 Tfh 帮助，从而被选择扩增。</p>
+        <ul>
+          <li>V(D)J 重排主要产生初始受体多样性，不是二次应答亲和力升高的直接机制。</li>
+          <li>类别转换改变恒定区，不直接提高抗原结合亲和力。</li>
+          <li>红细胞无细胞核，不进行抗体基因重排。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q11" data-q="11" data-answer="A">
+      <div class="meta"><span class="tag">进化 · 系统树</span><span>11 / 16</span></div>
+      <h2>11. 祖征与衍征</h2>
+      <p class="stem">在构建系统树时，为什么共享衍征比共享祖征更能支持单系群？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>共享衍征更可能来自该类群最近共同祖先的新演化特征</button>
+        <button class="option" data-choice="B"><b>B</b>共享祖征只存在于化石，现生类群没有祖征</button>
+        <button class="option" data-choice="C"><b>C</b>共享衍征一定不会发生趋同或逆转</button>
+        <button class="option" data-choice="D"><b>D</b>祖征和衍征在系统学中完全等价</button>
+      </div>
+      <div class="answer">
+        <h3>答案：A</h3>
+        <p>共享衍征可指示从最近共同祖先继承的新特征，因此支持该祖先及其所有后代组成的单系群。共享祖征可能广泛存在于更大的祖先类群中，不能限定较小分支。</p>
+        <ul>
+          <li>衍征也可能趋同或逆转，所以需要多性状/分子数据综合。</li>
+          <li>现生生物当然可保留祖征。</li>
+          <li>IBO 系统学题常考“祖征不能定义内部分支”。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q12" data-q="12" data-answer="D">
+      <div class="meta"><span class="tag">生态 · Lotka-Volterra</span><span>12 / 16</span></div>
+      <h2>12. 捕食者-猎物相位差</h2>
+      <p class="stem">在经典 Lotka-Volterra 捕食者-猎物模型中，若猎物数量先上升，捕食者数量峰值通常滞后。最合理原因是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>捕食者完全不依赖猎物</button>
+        <button class="option" data-choice="B"><b>B</b>猎物上升会立刻使所有捕食者死亡</button>
+        <button class="option" data-choice="C"><b>C</b>模型中捕食者出生率与猎物无关，只由温度决定</button>
+        <button class="option" data-choice="D"><b>D</b>猎物增加提高捕食者摄食与繁殖，但捕食者种群增长需要时间</button>
+      </div>
+      <div class="answer">
+        <h3>答案：D</h3>
+        <p>猎物密度升高提供更多资源，使捕食者出生率上升或死亡率下降，但个体发育与繁殖导致种群响应滞后，因此捕食者峰值通常落后于猎物峰值。</p>
+        <ul>
+          <li>经典模型的相位差来自相互作用项和种群增长时间延迟。</li>
+          <li>真实生态系统还受庇护所、替代猎物、密度制约等影响。</li>
+          <li>A/C 与模型假设相反。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q13" data-q="13" data-answer="B">
+      <div class="meta"><span class="tag">生物统计 · 实验设计</span><span>13 / 16</span></div>
+      <h2>13. 伪重复识别</h2>
+      <p class="stem">研究者将 20 株植物放入同一个高 CO2 生长箱，另 20 株放入同一个正常 CO2 生长箱，并把每株植物当作独立重复做 t 检验。最严重的问题是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>样本量太大，不能做统计</button>
+        <button class="option" data-choice="B"><b>B</b>处理水平与生长箱完全混杂，植物个体是箱内伪重复</button>
+        <button class="option" data-choice="C"><b>C</b>CO2 实验不能使用植物</button>
+        <button class="option" data-choice="D"><b>D</b>t 检验永远不能用于生物学</button>
+      </div>
+      <div class="answer">
+        <h3>答案：B</h3>
+        <p>真正独立的实验单位是生长箱而不是箱内植物。每个处理只有一个箱，无法区分 CO2 处理效应与箱体差异，属于典型伪重复。</p>
+        <ul>
+          <li>应设置多个独立生长箱随机分配到处理组。</li>
+          <li>统计检验必须匹配实验单位和随机化层级。</li>
+          <li>增加同一箱内植物数量不能替代处理重复。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q14" data-q="14" data-answer="C">
+      <div class="meta"><span class="tag">分子生物 · CRISPR</span><span>14 / 16</span></div>
+      <h2>14. CRISPR 敲除判读</h2>
+      <p class="stem">用 Cas9 靶向某编码序列第一个外显子，测序显示多数等位基因发生 1 bp 插入。最可能的功能后果是？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>一定产生完全正常蛋白，因为插入只有 1 bp</button>
+        <button class="option" data-choice="B"><b>B</b>只会改变一个氨基酸，不影响下游读码</button>
+        <button class="option" data-choice="C"><b>C</b>移码导致提前终止密码子，可能触发无义介导 mRNA 降解或产生截短蛋白</button>
+        <button class="option" data-choice="D"><b>D</b>Cas9 会自动修复所有突变等位基因</button>
+      </div>
+      <div class="answer">
+        <h3>答案：C</h3>
+        <p>编码区非 3 的倍数插入/缺失通常造成移码，改变下游全部密码子并常产生提前终止密码子。若提前终止位置满足条件，mRNA 可能被 NMD 降解。</p>
+        <ul>
+          <li>1 bp 插入比 3 bp 插入更可能造成严重移码。</li>
+          <li>是否完全敲除还需考虑剪接变体、起始密码子下游重启和蛋白残余功能。</li>
+          <li>Cas9 造成双链断裂，修复依赖细胞 DNA 修复途径。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q15" data-q="15" data-answer="A">
+      <div class="meta"><span class="tag">动物发育 · Hox</span><span>15 / 16</span></div>
+      <h2>15. Hox 基因共线性</h2>
+      <p class="stem">脊椎动物中，Hox 基因在染色体上的排列顺序常与其沿身体前后轴表达边界相关。若后部 Hox 基因在更前方异位表达，最可能导致？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>前部结构发生后部化转变</button>
+        <button class="option" data-choice="B"><b>B</b>所有细胞立即变成配子</button>
+        <button class="option" data-choice="C"><b>C</b>线粒体完全消失</button>
+        <button class="option" data-choice="D"><b>D</b>不会有任何表型，因为 Hox 只在植物中工作</button>
+      </div>
+      <div class="answer">
+        <h3>答案：A</h3>
+        <p>Hox 基因指定前后轴区域身份。后部 Hox 基因前移表达常使较前结构获得较后区域身份，即后部化/homeotic transformation。</p>
+        <ul>
+          <li>Hox 是动物体轴模式形成的核心调控因子。</li>
+          <li>共线性包括空间共线性，有时也包括时间共线性。</li>
+          <li>Hox 表型不是代谢器官“立即消失”，而是区域身份改变。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="question" id="q16" data-q="16" data-answer="D">
+      <div class="meta"><span class="tag">综合实验 · 证据边界</span><span>16 / 16</span></div>
+      <h2>16. 最强因果推断</h2>
+      <p class="stem">某研究发现敲低基因 X 后，细胞迁移速度下降；同时 RNA-seq 显示肌动蛋白调控基因表达变化。下列哪一组实验最能加强“X 通过肌动蛋白网络调控迁移”的因果结论？</p>
+      <div class="options">
+        <button class="option" data-choice="A"><b>A</b>只重复 RNA-seq，获得更长基因列表</button>
+        <button class="option" data-choice="B"><b>B</b>只拍摄一张迁移细胞照片</button>
+        <button class="option" data-choice="C"><b>C</b>证明 X 在所有组织都有表达即可</button>
+        <button class="option" data-choice="D"><b>D</b>进行独立 siRNA/CRISPR 验证、X 回补救援、F-actin 成像和下游肌动蛋白调控因子救援</button>
+      </div>
+      <div class="answer">
+        <h3>答案：D</h3>
+        <p>强因果链需要排除脱靶、证明表型可由 X 回补救援、显示肌动蛋白网络结构或动态改变，并用下游因子救援建立通路顺序。单一相关性数据不足以证明机制。</p>
+        <ul>
+          <li>独立干预减少脱靶解释。</li>
+          <li>救援实验是遗传因果推断的关键证据。</li>
+          <li>RNA-seq 是线索，不等同于功能机制证明。</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <div class="toolbar">
+    <button type="button" id="showScore">计算已作答正确数</button>
+    <button type="button" class="secondary" id="reset">清空作答</button>
+  </div>
+
+  <script>
+    const key = "daily-IBO-test-answers-v1";
+    const answers = JSON.parse(localStorage.getItem(key) || "{}");
+    const questions = [...document.querySelectorAll(".question")];
+    const grid = document.getElementById("answerGrid");
+    const answeredCount = document.getElementById("answeredCount");
+    const scoreText = document.getElementById("scoreText");
+
+    function save() {
+      localStorage.setItem(key, JSON.stringify(answers));
+    }
+
+    function buildGrid() {
+      grid.innerHTML = questions.map(q => {
+        const n = q.dataset.q;
+        return `<a class="bubble" id="b${n}" href="#q${n}">${n}</a>`;
+      }).join("");
+    }
+
+    function applyState() {
+      let answered = 0;
+      questions.forEach(q => {
+        const n = q.dataset.q;
+        const selected = answers[n];
+        const correct = q.dataset.answer;
+        q.querySelectorAll(".option").forEach(btn => {
+          const choice = btn.dataset.choice;
+          btn.classList.toggle("selected", selected === choice);
+          btn.classList.toggle("correct", selected && choice === correct);
+          btn.classList.toggle("wrong", selected === choice && selected !== correct);
+        });
+        const bubble = document.getElementById(`b${n}`);
+        if (bubble) {
+          bubble.classList.toggle("answered", Boolean(selected));
+          bubble.textContent = selected ? `${n}${selected}` : n;
+        }
+        if (selected) answered += 1;
+      });
+      answeredCount.textContent = answered;
+    }
+
+    questions.forEach(q => {
+      q.querySelectorAll(".option").forEach(btn => {
+        btn.addEventListener("click", () => {
+          answers[q.dataset.q] = btn.dataset.choice;
+          save();
+          applyState();
+        });
+      });
+    });
+
+    document.getElementById("showScore").addEventListener("click", () => {
+      let done = 0;
+      let correct = 0;
+      questions.forEach(q => {
+        const selected = answers[q.dataset.q];
+        if (!selected) return;
+        done += 1;
+        if (selected === q.dataset.answer) correct += 1;
+      });
+      scoreText.textContent = `已作答 ${done}/16，正确 ${correct}/${done || 0}`;
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      Object.keys(answers).forEach(k => delete answers[k]);
+      save();
+      scoreText.textContent = "已清空作答";
+      applyState();
+    });
+
+    buildGrid();
+    applyState();
+  </script>
+</body>
+</html>
