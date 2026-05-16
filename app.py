@@ -672,6 +672,14 @@ def zoology_quiz():
     return send_from_directory(BASE_DIR / "static", "zoology-quiz.html")
 
 
+@app.route("/micro-ibo")
+def micro_ibo_quiz():
+    """Mobile-friendly IBO-style quiz based on the microscope image."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "micro-ibo-quiz.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

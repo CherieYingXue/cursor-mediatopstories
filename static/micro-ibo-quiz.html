@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#065f46">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>显微图 · IBO 高难选择题卡</title>
+  <style>
+    :root {
+      --bg: #06130f;
+      --card: #10231d;
+      --card2: #0b1b16;
+      --text: #ecfdf5;
+      --muted: #9ca3af;
+      --accent: #34d399;
+      --accent2: #059669;
+      --answer: #a7f3d0;
+      --border: rgba(52, 211, 153, .25);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(52, 211, 153, .22), transparent 32%),
+        radial-gradient(circle at 95% 15%, rgba(16, 185, 129, .12), transparent 30%),
+        linear-gradient(180deg, #06130f 0%, #020617 100%);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 13px 16px 10px;
+      background: rgba(6, 19, 15, .94);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: .01em;
+    }
+    header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.42;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 16px 4px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(16, 35, 29, .9);
+      color: #d1fae5;
+      padding: 7px 12px;
+      font-size: .8rem;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--accent2);
+      color: white;
+      border-color: var(--accent);
+    }
+    main {
+      padding: 10px 16px calc(102px + var(--safe-bottom));
+    }
+    .card {
+      min-height: 64dvh;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 19px;
+      background: linear-gradient(155deg, rgba(16, 35, 29, .98), rgba(5, 19, 15, .98));
+      box-shadow: 0 24px 64px rgba(0, 0, 0, .36);
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+    .badge {
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 150, 105, .2);
+      color: #d1fae5;
+    }
+    .answer-card .badge {
+      border-color: rgba(167, 243, 208, .35);
+      background: rgba(22, 163, 74, .18);
+      color: var(--answer);
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.48;
+    }
+    .stem {
+      margin: 0;
+      line-height: 1.72;
+      color: #d1d5db;
+      font-size: .97rem;
+    }
+    .options {
+      display: grid;
+      gap: 10px;
+    }
+    .option {
+      border: 1px solid rgba(156, 163, 175, .2);
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: rgba(2, 6, 23, .38);
+      color: #dbeafe;
+      line-height: 1.55;
+      font-size: .91rem;
+    }
+    .option b {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5em;
+      height: 1.5em;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: rgba(52, 211, 153, .16);
+      color: #bbf7d0;
+      font-size: .78rem;
+    }
+    .correct {
+      margin: 0;
+      font-size: 1.32rem;
+      font-weight: 800;
+      color: var(--answer);
+    }
+    .analysis {
+      margin: 0;
+      color: #d1d5db;
+      line-height: 1.72;
+      font-size: .96rem;
+    }
+    .detail {
+      margin: 0;
+      padding-left: 1.1em;
+      color: #cbd5e1;
+      line-height: 1.66;
+      font-size: .9rem;
+    }
+    .detail li { margin-bottom: 8px; }
+    .hint {
+      margin-top: auto;
+      text-align: center;
+      color: var(--muted);
+      font-size: .74rem;
+    }
+    .bottom {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px calc(12px + var(--safe-bottom));
+      border-top: 1px solid var(--border);
+      background: rgba(2, 6, 23, .94);
+      backdrop-filter: blur(14px);
+    }
+    .bottom button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 10px;
+      font-size: .95rem;
+      font-weight: 800;
+      color: var(--text);
+      background: var(--card);
+    }
+    .bottom button.primary { background: var(--accent2); }
+    .bottom button:disabled { opacity: .35; }
+    .progress {
+      min-width: 78px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>显微图 · IBO 高难选择题</h1>
+    <p>基于图中绿色植物组织碎片：薄壁细胞、叶绿体分布、显微成像、组织判读与实验推理。</p>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="题目范围"></nav>
+  <main id="deck" aria-live="polite"></main>
+  <nav class="bottom" aria-label="翻页">
+    <button type="button" id="prevBtn">上一张</button>
+    <span class="progress" id="progress">--</span>
+    <button type="button" id="nextBtn" class="primary">下一张</button>
+  </nav>
+  <script>
+    const questions = [
+      {
+        group: "显微判读",
+        title: "1. 可支持的最强结论",
+        q: "仅根据这张明场显微图，以下哪一结论最严谨？",
+        options: [
+          "样品一定来自 C4 植物的叶片，因为可见绿色团块",
+          "样品含有具叶绿素的植物细胞，但仅凭图像不足以确定物种或光合途径",
+          "样品一定是洋葱鳞片叶表皮，因为细胞呈多边形",
+          "图中所有圆形亮斑都可判定为细胞核"
+        ],
+        answer: "B",
+        analysis: "图像可见绿色组织和多边形细胞，支持“含叶绿素的植物组织”这一层级的判断。但没有比例尺、染色信息、完整器官结构和解剖连续性，不能直接确定物种、C3/C4 或细胞器身份。",
+        detail: [
+          "C4 判断需要 Kranz anatomy、酶定位或同位素/气体交换证据。",
+          "洋葱鳞片叶表皮通常无叶绿体，除保卫细胞外不呈这种绿色分布。",
+          "未染色明场下，气泡、淀粉粒、污点也可能呈圆形亮斑。"
+        ]
+      },
+      {
+        group: "细胞结构",
+        title: "2. 叶绿体周边分布",
+        q: "图中许多绿色颗粒或绿色区域贴近细胞边缘。若这些绿色结构为叶绿体，最合理的细胞学解释是？",
+        options: [
+          "成熟植物细胞中央大液泡将细胞质和叶绿体挤向细胞周边",
+          "叶绿体只能存在于细胞壁内，不能进入细胞质",
+          "细胞核排斥叶绿体，使它们全部进入细胞壁",
+          "叶绿体位于细胞外基质中，用于吸收土壤中的光"
+        ],
+        answer: "A",
+        analysis: "成熟薄壁细胞常具有大中央液泡，细胞质被压成薄层贴近细胞膜，叶绿体随细胞质分布在周边。这是活体叶肉细胞显微观察中的常见现象。",
+        detail: [
+          "叶绿体属于细胞质内的双层膜细胞器，不在细胞壁内。",
+          "未染色图像中“周边绿色”不能证明全部绿色颗粒均为叶绿体，但该解释最符合植物细胞结构。",
+          "若观察到胞质环流，叶绿体位置还会随时间变化。"
+        ]
+      },
+      {
+        group: "组织学",
+        title: "3. 表皮、叶肉与维管组织",
+        q: "若要把图中组织判定为叶片横切面中的“栅栏组织”，下列哪一项附加观察最关键？",
+        options: [
+          "细胞随机排列、间隙很大且靠近下表皮",
+          "细胞长柱状、排列紧密，通常位于上表皮下方并含较多叶绿体",
+          "细胞壁明显木质化，成环状导管，位于维管束中央",
+          "细胞无叶绿体且外壁角质层极厚"
+        ],
+        answer: "B",
+        analysis: "栅栏组织的典型特征是长柱状细胞、排列紧密、位于上表皮下方、叶绿体丰富。图像只显示局部碎片，不足以直接定位上下表皮，因此需要这些附加结构证据。",
+        detail: [
+          "A 更接近海绵组织。",
+          "C 指向木质部导管，而不是栅栏组织。",
+          "D 更像表皮细胞特征。"
+        ]
+      },
+      {
+        group: "光合作用",
+        title: "4. C3/C4 证据链",
+        q: "如果研究者想由该显微样品判断植物是否为 C4 类型，哪组证据最有判别力？",
+        options: [
+          "样品呈绿色即可判定为 C4",
+          "观察到维管束周围大型叶绿体丰富的束鞘细胞环，并结合 PEPC/Rubisco 的组织定位",
+          "细胞呈多边形即可判定为 C4",
+          "只要叶片较厚，就一定为 C4"
+        ],
+        answer: "B",
+        analysis: "C4 植物常具有 Kranz anatomy：维管束外有发达束鞘细胞，C4 初固定与 Calvin 循环在空间上分离。单纯绿色、细胞形状或厚度都不是可靠证据。",
+        detail: [
+          "IBO 题常考“形态证据 + 生化定位”的联合推理。",
+          "某些 C4 植物解剖结构可有变型，因此单一形态特征仍需谨慎。",
+          "C3 叶片也可能很绿或较厚。"
+        ]
+      },
+      {
+        group: "显微技术",
+        title: "5. 无比例尺条件下的定量陷阱",
+        q: "关于从这张照片估算细胞实际大小，以下哪项做法最科学？",
+        options: [
+          "直接用手机屏幕上的毫米尺测量照片中细胞宽度即可得到真实大小",
+          "只要知道显微镜是低倍镜，就可准确得到细胞直径",
+          "用载台测微尺校准目镜或相机像素，再在同一放大倍数下换算",
+          "绿色细胞越亮，说明实际尺寸越大"
+        ],
+        answer: "C",
+        analysis: "显微照片没有比例尺时，屏幕显示大小受拍摄、裁剪和缩放影响。必须使用载台测微尺或已知尺度校准同一成像系统与放大倍数。",
+        detail: [
+          "总放大倍数不能自动给出视野内每个像素对应的真实长度。",
+          "手机拍摄目镜会引入额外放大与畸变。",
+          "亮度受照明、聚焦、色素浓度和曝光影响，不等于尺寸。"
+        ]
+      },
+      {
+        group: "实验推理",
+        title: "6. 高渗处理后的预期变化",
+        q: "若将同类活体绿色叶肉细胞置于高渗蔗糖溶液中，最可能首先观察到哪种变化？",
+        options: [
+          "细胞壁迅速收缩并完全消失",
+          "原生质体脱离细胞壁，叶绿体随胞质向内聚集",
+          "叶绿体全部转化为线粒体",
+          "细胞核分裂速度立即加倍"
+        ],
+        answer: "B",
+        analysis: "高渗环境使细胞失水，质膜与细胞壁分离，发生质壁分离。叶绿体在细胞质中，因此会随原生质体回缩而向内聚集。",
+        detail: [
+          "细胞壁较坚硬，通常保持外形。",
+          "质壁分离是判断植物细胞活性和渗透现象的经典实验。",
+          "蔗糖高渗不会把叶绿体转化为线粒体。"
+        ]
+      },
+      {
+        group: "成像伪影",
+        title: "7. 圆形亮斑的身份",
+        q: "图中可见若干小圆形亮斑或环状结构。若要区分它们是细胞器、气泡还是灰尘，最有效的显微操作是？",
+        options: [
+          "只看颜色，白色的一定是细胞核",
+          "调节焦距并轻推盖玻片，观察其是否随样品层移动、是否有折光边缘",
+          "关闭光源，若还看得见就是叶绿体",
+          "把总放大倍数调到最大即可自动消除所有伪影"
+        ],
+        answer: "B",
+        analysis: "气泡常有强折光环，调焦时边缘变化明显，轻推盖玻片可观察其与样品层是否同步移动。灰尘可能在目镜、物镜或载玻片不同平面上，调焦行为也不同。",
+        detail: [
+          "未染色明场下，细胞核通常不一定清晰可见。",
+          "最大放大倍数若超过有效分辨率，只会得到空放大。",
+          "关闭光源无法提供结构判别。"
+        ]
+      },
+      {
+        group: "水分运输",
+        title: "8. 维管束判定",
+        q: "如果在该组织碎片中发现一簇管状、壁厚、近似空腔的细胞，并推断其属于木质部，最直接支持该判断的特征是？",
+        options: [
+          "细胞含大量叶绿体并进行光合作用",
+          "细胞壁木质化加厚，成熟时细胞死亡，负责水和无机盐运输",
+          "细胞壁薄且含大量淀粉粒，专门储藏糖",
+          "细胞具有刺丝囊并可捕食浮游动物"
+        ],
+        answer: "B",
+        analysis: "木质部导管/管胞的关键特征是木质化加厚和成熟死亡，形成低阻力通道，用于水分和矿质元素运输。",
+        detail: [
+          "A 更接近叶肉细胞功能。",
+          "C 更接近储藏薄壁细胞。",
+          "D 是腔肠动物刺细胞相关，和植物组织无关。"
+        ]
+      },
+      {
+        group: "光合色素",
+        title: "9. 绿色的物理与生化含义",
+        q: "图中绿色区域主要反映叶绿素对可见光的哪种吸收/反射特性？",
+        options: [
+          "叶绿素强吸收绿光，所以样品看起来绿色",
+          "叶绿素主要吸收红光和蓝紫光，相对反射或透过绿光",
+          "绿色说明该组织只能进行呼吸作用，不能进行光合作用",
+          "绿色由细胞壁中的纤维素直接发光产生"
+        ],
+        answer: "B",
+        analysis: "叶绿素 a/b 对蓝紫光和红光吸收较强，对绿光吸收较弱，绿光更易被反射或透过，因此样品呈绿色。",
+        detail: [
+          "绿色不能单独证明光合速率高低。",
+          "明场下看到的绿色通常不是荧光，而是透射/反射光中的颜色。",
+          "纤维素本身通常无绿色。"
+        ]
+      },
+      {
+        group: "IBO综合",
+        title: "10. 最严谨的实验结论",
+        q: "某学生根据这张照片写下结论：“该样品一定是双子叶 C3 植物叶片的横切面，且所有绿色细胞都在同一焦平面。”作为竞赛阅卷者，你最应指出的核心问题是？",
+        options: [
+          "结论过度外推：图像只支持局部绿色植物组织判读，不能排除切片倾斜、厚度和焦平面差异",
+          "结论完全正确，因为只要有绿色就一定是双子叶 C3 叶片",
+          "结论错误的唯一原因是双子叶植物没有叶绿体",
+          "只要把照片调亮，就可以证明所有细胞在同一焦平面"
+        ],
+        answer: "A",
+        analysis: "高质量竞赛推理强调“证据边界”。该图像局部、无比例尺、无完整上下表皮/维管结构、无光合途径证据，并且显微样品厚度和切片倾斜会导致不同细胞处于不同焦平面。",
+        detail: [
+          "IBO 难题常要求避免从单张图像推出超出证据范围的分类结论。",
+          "双子叶/C3 判断需要更完整的解剖或生理证据。",
+          "焦平面问题来自光学和样品厚度，不能靠简单调亮解决。"
+        ]
+      }
+    ];
+
+    const letters = ["A", "B", "C", "D"];
+    const deck = document.getElementById("deck");
+    const tabs = document.getElementById("tabs");
+    const progress = document.getElementById("progress");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let group = "全部";
+    let cards = [];
+    let index = 0;
+    let touchStartX = 0;
+
+    function rebuildCards() {
+      const selected = group === "全部" ? questions : questions.filter(q => q.group === group);
+      cards = selected.flatMap((q, i) => [
+        { type: "question", item: q, n: i + 1, total: selected.length },
+        { type: "answer", item: q, n: i + 1, total: selected.length },
+      ]);
+      index = Math.min(index, Math.max(cards.length - 1, 0));
+    }
+
+    function renderTabs() {
+      const groups = ["全部", ...new Set(questions.map(q => q.group))];
+      tabs.innerHTML = groups.map(g =>
+        `<button type="button" class="tab ${g === group ? "active" : ""}" data-group="${g}">${g}</button>`
+      ).join("");
+      tabs.querySelectorAll(".tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+          group = btn.dataset.group;
+          index = 0;
+          rebuildCards();
+          renderTabs();
+          render();
+        });
+      });
+    }
+
+    function questionCard(card) {
+      const q = card.item;
+      return `
+        <article class="card">
+          <div class="meta"><span class="badge">题目卡 · ${q.group}</span><span>${card.n}/${card.total}</span></div>
+          <h2>${q.title}</h2>
+          <p class="stem">${q.q}</p>
+          <section class="options">
+            ${q.options.map((option, i) => `<div class="option"><b>${letters[i]}</b>${option}</div>`).join("")}
+          </section>
+          <p class="hint">下一张显示答案与解析</p>
+        </article>
+      `;
+    }
+
+    function answerCard(card) {
+      const q = card.item;
+      return `
+        <article class="card answer-card">
+          <div class="meta"><span class="badge">答案卡 · ${q.group}</span><span>${card.n}/${card.total}</span></div>
+          <h2>${q.title}</h2>
+          <p class="correct">正确答案：${q.answer}</p>
+          <p class="analysis">${q.analysis}</p>
+          <ul class="detail">${q.detail.map(d => `<li>${d}</li>`).join("")}</ul>
+          <p class="hint">下一张进入下一题</p>
+        </article>
+      `;
+    }
+
+    function render() {
+      if (!cards.length) {
+        deck.innerHTML = `<p style="text-align:center;color:#9ca3af;padding:42px 0">暂无题目</p>`;
+        progress.textContent = "--";
+        return;
+      }
+      const card = cards[index];
+      deck.innerHTML = card.type === "question" ? questionCard(card) : answerCard(card);
+      progress.textContent = `${index + 1} / ${cards.length}`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === cards.length - 1;
+    }
+
+    function go(delta) {
+      const next = index + delta;
+      if (next < 0 || next >= cards.length) return;
+      index = next;
+      render();
+    }
+
+    prevBtn.addEventListener("click", () => go(-1));
+    nextBtn.addEventListener("click", () => go(1));
+    deck.addEventListener("touchstart", event => {
+      touchStartX = event.changedTouches[0].screenX;
+    }, { passive: true });
+    deck.addEventListener("touchend", event => {
+      const dx = event.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(dx) >= 50) go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    rebuildCards();
+    renderTabs();
+    render();
+  </script>
+</body>
+</html>
