@@ -664,6 +664,14 @@ def knowledge_cards():
     return send_from_directory(BASE_DIR / "static", "zoology-cards.html")
 
 
+@app.route("/quiz")
+def zoology_quiz():
+    """Mobile-friendly advanced zoology multiple-choice cards."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "zoology-quiz.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

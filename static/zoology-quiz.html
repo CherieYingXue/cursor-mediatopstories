@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>普通动物学 · 高阶选择题卡片</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-2: #0f172a;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #a78bfa;
+      --accent-2: #7c3aed;
+      --good: #22c55e;
+      --bad: #f97316;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, .25), transparent 34%),
+        linear-gradient(180deg, #111827 0%, #020617 100%);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 12px 16px 10px;
+      background: rgba(17, 24, 39, .94);
+      border-bottom: 1px solid rgba(167, 139, 250, .25);
+      backdrop-filter: blur(14px);
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: .02em;
+    }
+    header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.4;
+    }
+    .filters {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 16px 6px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter {
+      flex: 0 0 auto;
+      border: 1px solid rgba(167, 139, 250, .25);
+      color: #ddd6fe;
+      background: rgba(31, 41, 55, .86);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: .8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .filter.active {
+      color: #fff;
+      background: var(--accent-2);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(167, 139, 250, .16);
+    }
+    main {
+      padding: 10px 16px calc(102px + var(--safe-bottom));
+    }
+    .card {
+      min-height: 62dvh;
+      border: 1px solid rgba(167, 139, 250, .24);
+      background: linear-gradient(155deg, rgba(31, 41, 55, .98), rgba(15, 23, 42, .98));
+      box-shadow: 0 22px 60px rgba(0, 0, 0, .35);
+      border-radius: 22px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+    .tag {
+      color: #ede9fe;
+      background: rgba(124, 58, 237, .32);
+      border: 1px solid rgba(167, 139, 250, .35);
+      padding: 4px 9px;
+      border-radius: 999px;
+    }
+    .kind-answer .tag {
+      background: rgba(34, 197, 94, .16);
+      border-color: rgba(34, 197, 94, .35);
+      color: #bbf7d0;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      line-height: 1.55;
+    }
+    .stem {
+      margin: 0;
+      color: #e5e7eb;
+      font-size: .98rem;
+      line-height: 1.72;
+    }
+    .options {
+      display: grid;
+      gap: 10px;
+      margin-top: 2px;
+    }
+    .option {
+      border: 1px solid rgba(148, 163, 184, .22);
+      background: rgba(15, 23, 42, .55);
+      border-radius: 14px;
+      padding: 12px 13px;
+      line-height: 1.5;
+      color: #d1d5db;
+      font-size: .92rem;
+    }
+    .option b {
+      display: inline-flex;
+      width: 1.45em;
+      height: 1.45em;
+      align-items: center;
+      justify-content: center;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: rgba(167, 139, 250, .16);
+      color: #ddd6fe;
+      font-size: .78rem;
+    }
+    .answer-line {
+      font-size: 1.3rem;
+      color: #bbf7d0;
+      font-weight: 700;
+      margin: 4px 0;
+    }
+    .analysis {
+      color: #d1d5db;
+      line-height: 1.7;
+      font-size: .96rem;
+      margin: 0;
+    }
+    .why {
+      margin: 0;
+      padding-left: 1.1em;
+      color: #cbd5e1;
+      line-height: 1.65;
+      font-size: .9rem;
+    }
+    .why li { margin-bottom: 8px; }
+    .footer-hint {
+      color: var(--muted);
+      font-size: .75rem;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .bottom {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px calc(12px + var(--safe-bottom));
+      background: rgba(2, 6, 23, .94);
+      border-top: 1px solid rgba(167, 139, 250, .22);
+      backdrop-filter: blur(14px);
+    }
+    .bottom button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 10px;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 700;
+      font-size: .95rem;
+    }
+    .bottom button.primary { background: var(--accent-2); }
+    .bottom button:disabled { opacity: .35; }
+    .progress {
+      min-width: 78px;
+      color: var(--muted);
+      font-size: .76rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>普通动物学 · 高阶 ABCD 题卡</h1>
+    <p>每道题后紧跟答案解析卡。适合手机碎片化刷题，内容偏细节与易混点。</p>
+  </header>
+  <nav class="filters" id="filters" aria-label="章节筛选"></nav>
+  <main id="deck" aria-live="polite"></main>
+  <nav class="bottom" aria-label="翻页">
+    <button type="button" id="prevBtn">上一张</button>
+    <span class="progress" id="progress">--</span>
+    <button type="button" id="nextBtn" class="primary">下一张</button>
+  </nav>
+  <script>
+    const questions = [
+      { ch: 1, title: "分类系统", q: "关于动物自然分类系统，下列哪一项最能体现其“自然性”？", options: ["主要依据成体外部形态是否相似", "尽可能反映类群间的共同祖先与亲缘远近", "优先采用经济价值与生活环境作为分类标准", "只使用拉丁学名而不使用中文名"], answer: "B", analysis: "自然分类系统的核心不是“像不像”，而是尽量反映系统发育关系。外形相似可能来自趋同进化，不能单独作为亲缘判断。", why: ["A：形态相似可作证据，但可能受趋同干扰。", "C：生态或经济价值不是自然分类的根本依据。", "D：命名规范不等于系统发育关系。"] },
+      { ch: 1, title: "命名法", q: "双名法中，一个物种的学名通常由哪两部分组成？", options: ["门名 + 纲名", "科名 + 属名", "属名 + 种加词", "种名 + 亚种名"], answer: "C", analysis: "双名法由属名和种加词组成，例如 Homo sapiens。属名首字母大写，种加词小写，通常斜体。", why: ["A/B：属于较高级分类阶元。", "D：亚种名属于三名法范围。"] },
+      { ch: 2, title: "上皮组织", q: "下列哪项最准确地区分上皮组织与结缔组织？", options: ["上皮组织细胞排列紧密，细胞间质少", "上皮组织一定含大量血管", "结缔组织没有细胞成分", "结缔组织只能起支持作用"], answer: "A", analysis: "上皮组织细胞紧密排列、极性明显、基底面附着基膜，通常无血管；结缔组织细胞较分散、细胞间质丰富。", why: ["B：典型上皮无血管，靠下方结缔组织扩散供养。", "C：结缔组织有成纤维细胞、巨噬细胞等。", "D：结缔组织还参与营养、保护、修复和免疫。"] },
+      { ch: 2, title: "排泄系统", q: "火焰细胞最典型地属于哪类排泄结构？", options: ["后肾管", "原肾管", "马氏管", "肾单位"], answer: "B", analysis: "火焰细胞是原肾管系统的末端细胞，纤毛摆动似火焰，可推动体液滤过，常见于扁形动物等。", why: ["A：后肾管通常以肾口开入体腔。", "C：马氏管常见于昆虫等节肢动物。", "D：肾单位是脊椎动物肾脏结构单位。"] },
+      { ch: 3, title: "草履虫核型", q: "草履虫接合生殖中，小核与大核的主要区别是？", options: ["小核主要负责营养代谢，大核主要负责遗传重组", "小核参与遗传与生殖，大核主要控制营养活动", "二者功能完全相同，只是大小不同", "大核只在无性生殖中存在，小核只在有性生殖中存在"], answer: "B", analysis: "纤毛虫常有核二型现象：小核与生殖、遗传重组相关，大核控制细胞日常营养和代谢活动。", why: ["A：把二者功能反了。", "C：大小差异背后是功能分化。", "D：两种核可同时存在。"] },
+      { ch: 3, title: "疟原虫生活史", q: "疟原虫生活史中，配子生殖和孢子生殖主要发生在哪一类寄主体内？", options: ["人体肝细胞", "人体红细胞", "按蚊体内", "淡水螺体内"], answer: "C", analysis: "疟原虫在人体内进行裂体生殖，在按蚊体内完成配子生殖和孢子生殖，因此按蚊是终寄主。", why: ["A/B：人体内主要是无性裂体增殖阶段。", "D：淡水螺是某些吸虫的中间寄主，不是疟原虫寄主。"] },
+      { ch: 4, title: "动物体制演化", q: "两侧对称在动物演化上的重要意义主要体现为？", options: ["使动物只能固着生活", "促进头部形成和定向运动", "使消化腔完全消失", "使所有动物都形成外骨骼"], answer: "B", analysis: "两侧对称与主动定向运动相适应，感觉器官和神经组织趋向身体前端集中，推动头化。", why: ["A：辐射对称更常见于固着或漂浮生活。", "C：消化系统并不因两侧对称而消失。", "D：外骨骼与节肢动物等类群有关。"] },
+      { ch: 4, title: "胚层", q: "中胚层出现后，对动物结构复杂化最直接的贡献是？", options: ["形成刺细胞", "形成肌肉、结缔组织和多数内脏器官", "使所有动物都进行光合作用", "使动物只能进行胞内消化"], answer: "B", analysis: "中胚层为肌肉、结缔组织、循环、排泄、生殖等系统的形成提供基础，是三胚层动物复杂化的重要条件。", why: ["A：刺细胞为腔肠动物特有结构。", "C：动物不以光合作用为主要营养方式。", "D：胞外消化在多细胞动物中更普遍。"] },
+      { ch: 5, title: "海绵水沟系", q: "海绵动物水沟系的主要功能是？", options: ["形成闭管循环系统", "通过水流完成滤食、呼吸和排泄", "产生脊索并支撑身体", "作为神经冲动传导通路"], answer: "B", analysis: "水由入水孔进入，经沟道和领细胞室过滤食物颗粒，再由出水孔排出，同时完成气体交换和代谢废物排出。", why: ["A：海绵没有循环系统。", "C：脊索见于脊索动物。", "D：海绵没有真正神经系统。"] },
+      { ch: 5, title: "领细胞", q: "领细胞在海绵动物中的关键作用是？", options: ["分泌贝壳", "产生水流并捕获食物颗粒", "形成刺丝囊", "形成马氏管"], answer: "B", analysis: "领细胞具有鞭毛和领状微绒毛，鞭毛摆动驱动水流，领部截留微小食物。", why: ["A：贝壳由软体动物外套膜分泌。", "C：刺丝囊为腔肠动物刺细胞结构。", "D：马氏管见于昆虫等。"] },
+      { ch: 6, title: "刺细胞", q: "刺细胞对于腔肠动物的分类识别意义在于？", options: ["它是该门最具诊断意义的特有结构", "它只存在于幼虫期", "它等同于肌肉细胞", "它说明腔肠动物已有闭管循环"], answer: "A", analysis: "刺细胞及其刺丝囊是腔肠动物的标志性结构，用于捕食、防御和附着。", why: ["B：成体也有刺细胞，常在触手集中。", "C：刺细胞不是肌肉细胞。", "D：腔肠动物没有闭管循环系统。"] },
+      { ch: 6, title: "消化循环腔", q: "腔肠动物“消化循环腔”的名称说明它兼具哪两类功能？", options: ["消化与营养物质分配", "排泄与配子形成", "骨骼支持与蜕皮", "神经传导与视觉"], answer: "A", analysis: "腔肠动物有口无肛门，消化腔不仅消化食物，也在体内分配营养物质，因此称消化循环腔。", why: ["B/C/D：这些不是消化循环腔名称的核心含义。"] },
+      { ch: 7, title: "扁形动物体制", q: "扁形动物比腔肠动物更进步的关键体制特征是？", options: ["辐射对称和两胚层", "两侧对称和三胚层", "出现脊柱", "出现恒温"], answer: "B", analysis: "扁形动物为两侧对称、三胚层、无体腔动物，出现器官系统雏形，是动物体制复杂化的重要阶段。", why: ["A：属于腔肠动物的典型特征。", "C/D：脊柱和恒温出现在脊椎动物演化后期。"] },
+      { ch: 7, title: "绦虫寄生适应", q: "绦虫对肠道寄生生活高度适应的结构表现不包括哪项？", options: ["头节具吸盘或小钩", "体表具有吸收营养的皮层", "消化系统高度发达并有复杂胃", "身体由大量节片组成且生殖系统发达"], answer: "C", analysis: "绦虫无消化管，依靠体表吸收寄主肠道内已消化的营养。头节固着、节片和强生殖力是寄生适应。", why: ["A/B/D：均为绦虫典型寄生适应。", "C：与事实相反，是本题陷阱。"] },
+      { ch: 8, title: "假体腔", q: "假体腔与真体腔最关键的区别是？", options: ["假体腔内没有任何液体", "假体腔不是由中胚层体腔膜完全包围", "假体腔只存在于脊椎动物", "真体腔动物没有消化管"], answer: "B", analysis: "假体腔来源于胚胎囊胚腔残余，不具完整中胚层体腔膜；真体腔由中胚层包围。", why: ["A：假体腔内有体腔液，可起流体骨骼作用。", "C：线虫等无脊椎动物具有假体腔。", "D：真体腔动物可有完整消化管。"] },
+      { ch: 8, title: "线虫角质层", q: "线虫体表角质层的重要功能之一是？", options: ["作为光合作用场所", "保护虫体并参与抵抗寄主体内环境", "分泌珍珠层", "形成管足"], answer: "B", analysis: "线虫角质层较厚，起保护、维持体形和抵抗外界或寄主体内消化液作用；生长时需蜕皮。", why: ["C：珍珠层与双壳类外套膜有关。", "D：管足属于棘皮动物水管系统。"] },
+      { ch: 9, title: "环节动物分节", q: "环节动物同律分节的演化意义主要是？", options: ["完全取消体腔", "提高运动灵活性并利于局部器官重复配置", "使动物只能漂浮生活", "使动物产生刺细胞"], answer: "B", analysis: "身体分节使肌肉、神经、排泄等结构重复排列，运动可分区协调，提升身体控制精度。", why: ["A：环节动物有真体腔。", "C：环节动物生活方式多样。", "D：刺细胞见于腔肠动物。"] },
+      { ch: 9, title: "后肾管", q: "典型后肾管与原肾管相比，哪项描述更准确？", options: ["后肾管以盲端火焰细胞开始", "后肾管通常以肾口开入体腔", "后肾管只存在于原生动物", "后肾管没有排泄功能"], answer: "B", analysis: "后肾管一端以具纤毛的肾口开入体腔，另一端开口于体外，常见于环节动物等真体腔动物。", why: ["A：盲端火焰细胞是原肾管特征。", "C：原生动物无后肾管。", "D：后肾管负责排泄和渗透调节。"] },
+      { ch: 10, title: "外套膜", q: "软体动物外套膜的核心功能是？", options: ["分泌贝壳并形成外套腔", "形成节肢动物外骨骼", "产生脊索", "形成脊椎骨"], answer: "A", analysis: "外套膜是软体动物的重要结构，可分泌贝壳，外套膜与内脏团之间形成外套腔，容纳鳃等结构。", why: ["B：节肢动物外骨骼主要为几丁质。", "C/D：属于脊索动物或脊椎动物特征。"] },
+      { ch: 10, title: "齿舌", q: "关于软体动物齿舌，下列哪项正确？", options: ["所有软体动物都具有齿舌", "双壳类通常无齿舌，以滤食为主", "齿舌是鸟类飞行器官", "齿舌位于外套膜外表面"], answer: "B", analysis: "齿舌是许多软体动物刮取食物的结构，但双壳类因滤食生活通常无齿舌。", why: ["A：双壳类是重要例外。", "C：明显不属于软体动物结构。", "D：齿舌位于口腔相关结构中。"] },
+      { ch: 11, title: "节肢动物蜕皮", q: "节肢动物必须周期性蜕皮的根本原因是？", options: ["外骨骼限制身体连续增大", "没有肌肉系统", "没有神经系统", "必须更换脊索"], answer: "A", analysis: "节肢动物几丁质外骨骼保护和支持身体，但不能随身体连续生长，因此需蜕皮实现阶段性增长。", why: ["B/C：节肢动物肌肉和神经系统发达。", "D：节肢动物无脊索。"] },
+      { ch: 11, title: "昆虫气管", q: "昆虫气管系统的高效性主要在于？", options: ["血液携氧能力极强", "空气经气门和气管直接输送到组织附近", "以鳃作为唯一呼吸器官", "依靠消化循环腔运输氧气"], answer: "B", analysis: "昆虫气管系统由气门、气管、微气管组成，氧气可直接到达组织细胞附近，循环系统不主要承担携氧。", why: ["A：昆虫血淋巴通常不主要运输氧。", "C：水生幼虫可能有鳃状结构，但成虫典型为气管。", "D：消化循环腔见于腔肠动物。"] },
+      { ch: 12, title: "触手冠", q: "触手冠动物名称中的“触手冠”主要指？", options: ["口周围具纤毛触手组成的取食结构", "昆虫头部一对触角", "海星腕上的管足", "鸟类喙部角质鞘"], answer: "A", analysis: "触手冠由口周围一圈或一组具纤毛触手构成，可制造水流并滤取食物。苔藓动物、腕足动物等具有该特征。", why: ["B/C/D：均是其他类群结构，与触手冠动物名称无关。"] },
+      { ch: 13, title: "水管系统", q: "棘皮动物水管系统中，与外界相通并参与调节水流的筛状结构通常称为？", options: ["马氏管", "石管", "筛板（ madreporite ）", "肾口"], answer: "C", analysis: "水管系统通常由筛板、石管、环管、辐管、侧管、管足等组成。筛板是与外界相通的筛状入口。", why: ["A：马氏管见于昆虫等。", "B：石管连接筛板与环管，但不是筛状入口本身。", "D：肾口属于后肾管结构。"] },
+      { ch: 13, title: "后口动物", q: "棘皮动物被认为与脊索动物关系较近的重要胚胎学依据是？", options: ["均为原口动物", "均属于后口动物", "均具有几丁质外骨骼", "均具有刺细胞"], answer: "B", analysis: "棘皮动物、半索动物和脊索动物均属后口动物，原口形成肛门或接近肛门处，口另行形成。", why: ["A：与事实相反。", "C：几丁质外骨骼是节肢动物特征。", "D：刺细胞见于腔肠动物。"] },
+      { ch: 14, title: "半索动物", q: "半索动物柱头虫常被用于讨论脊索动物起源，主要因为它具有？", options: ["真正脊柱和颌", "口索、鳃裂以及与后口动物相关的发育特征", "羽毛和恒温", "外套膜和贝壳"], answer: "B", analysis: "半索动物具有口索、咽鳃裂等特征，且幼虫与棘皮动物有相似性，反映后口动物内部的演化联系。", why: ["A：柱头虫不是脊椎动物。", "C：为鸟类特征。", "D：为软体动物特征。"] },
+      { ch: 15, title: "脊索动物三特征", q: "下列哪组结构最能概括脊索动物的三大基本特征？", options: ["外骨骼、马氏管、复眼", "脊索、背神经管、咽鳃裂", "刺细胞、消化循环腔、水母型", "外套膜、齿舌、贝壳"], answer: "B", analysis: "脊索、背神经管和咽鳃裂是脊索动物的基本诊断特征，至少在生活史某阶段出现。", why: ["A：节肢动物相关。", "C：腔肠动物相关。", "D：软体动物相关。"] },
+      { ch: 15, title: "尾索动物", q: "海鞘成体与幼体差异很大，最能体现其尾索动物特征的是？", options: ["幼体尾部具脊索和背神经管，成体常退化并固着", "成体具有发达四肢", "幼体具有羽毛", "成体具有管足和筛板"], answer: "A", analysis: "尾索动物幼体蝌蚪状，尾部有脊索和背神经管；变态后成体常固着，许多脊索动物特征退化。", why: ["B/C/D：分别不符合尾索动物结构。"] },
+      { ch: 16, title: "圆口纲", q: "圆口纲区别于有颌脊椎动物的显著特征是？", options: ["无颌，口呈吸附或圆形构造", "具有真正上下颌和偶鳍", "体表被羽毛", "具有乳腺"], answer: "A", analysis: "圆口纲如七鳃鳗、盲鳗为无颌类，口部呈圆形吸附结构，代表现生最原始脊椎动物类群之一。", why: ["B：有颌和偶鳍是鱼类等有颌类的特征。", "C/D：分别为鸟类和哺乳类特征。"] },
+      { ch: 17, title: "鱼类侧线", q: "鱼类侧线系统的主要功能是？", options: ["感知水流、水压和低频振动", "分泌羊膜", "制造乳汁", "形成羽毛"], answer: "A", analysis: "侧线系统是鱼类适应水生环境的重要感觉系统，可感知周围水体扰动，帮助定位、避敌和群游。", why: ["B：羊膜见于羊膜动物。", "C：哺乳类特征。", "D：鸟类特征。"] },
+      { ch: 17, title: "软骨鱼与硬骨鱼", q: "下列哪项更符合软骨鱼类特征？", options: ["内骨骼主要为软骨，鳃裂多直接外露", "内骨骼完全由鸟骨构成", "均具有羊膜卵", "均无颌"], answer: "A", analysis: "鲨、鳐等软骨鱼内骨骼以软骨为主，通常鳃裂外露；硬骨鱼多有鳃盖。", why: ["C：羊膜卵见于爬行类、鸟类、哺乳类祖先系统。", "D：软骨鱼属于有颌类。"] },
+      { ch: 18, title: "两栖类限制", q: "两栖动物虽能登陆，但仍受水环境限制的关键原因是？", options: ["卵无坚硬卵壳且皮肤需保持湿润", "具有完全防水的角质鳞", "成体完全不用肺呼吸", "均为恒温动物"], answer: "A", analysis: "两栖类卵缺乏防干燥结构，通常需水中或潮湿环境发育；皮肤裸露湿润并参与呼吸，也限制其离水能力。", why: ["B：干燥角质鳞为爬行类适应陆地的重要特征。", "C：成体常用肺和皮肤呼吸。", "D：两栖类为变温动物。"] },
+      { ch: 19, title: "羊膜卵", q: "羊膜卵对脊椎动物登陆演化的最大意义是？", options: ["使胚胎可在陆地相对独立地发育", "使所有动物都变为水母型", "使脊索永久消失", "使成体只能用鳃呼吸"], answer: "A", analysis: "羊膜、尿囊、绒毛膜及卵壳等结构共同保护胚胎、储存废物、交换气体，使繁殖摆脱对水体的强依赖。", why: ["B/C/D：均与羊膜卵功能无关。"] },
+      { ch: 19, title: "爬行类皮肤", q: "爬行类皮肤角质鳞片的主要适应意义是？", options: ["减少水分散失并保护体表", "增强皮肤呼吸以替代肺", "产生乳汁", "形成水管系统"], answer: "A", analysis: "爬行类皮肤干燥，角质层和鳞片发达，可显著降低蒸发失水，是陆地适应的重要条件。", why: ["B：角质化会降低皮肤呼吸，爬行类主要用肺呼吸。", "C：乳腺属于哺乳类。", "D：水管系统属于棘皮动物。"] },
+      { ch: 20, title: "鸟类双重呼吸", q: "鸟类“双重呼吸”最准确的含义是？", options: ["吸气和呼气时肺内均有新鲜空气流经", "同时用鳃和肺呼吸", "同时用皮肤和气管呼吸", "每次呼吸都进行两次受精"], answer: "A", analysis: "鸟类气囊不直接进行气体交换，但可作为风箱，使吸气与呼气阶段都有气流通过肺，提高供氧效率。", why: ["B/C：不符合鸟类呼吸结构。", "D：与呼吸无关。"] },
+      { ch: 20, title: "适飞结构", q: "下列哪项不是鸟类适应飞行的结构或生理特征？", options: ["胸肌发达并附着于龙骨突", "骨骼轻而坚固，部分骨中空", "气囊参与通气", "具有厚重实心骨以增加体重"], answer: "D", analysis: "飞行要求减轻体重并提高能量供应。厚重实心骨会增加负担，不属于鸟类适飞特征。", why: ["A/B/C：均为典型适飞适应。"] },
+      { ch: 21, title: "哺乳类齿式", q: "哺乳动物齿分化的演化意义主要是？", options: ["使摄食处理更精细并与食性分化相关", "使动物完全不用消化系统", "使所有哺乳动物都只能吃草", "使体温降低到环境温度"], answer: "A", analysis: "门齿、犬齿、前臼齿、臼齿的分化提高切割、撕裂、研磨效率，与不同食性和生态位分化密切相关。", why: ["B/C/D：均不符合哺乳类特征。"] },
+      { ch: 21, title: "胎盘", q: "真兽类胎盘的核心功能不包括哪项？", options: ["母体与胎儿之间进行气体和营养交换", "转运代谢废物", "部分内分泌调节", "在体外保护硬壳卵免受干燥"], answer: "D", analysis: "胎盘是母胎物质交换和调节结构；硬壳卵保护是爬行类和鸟类等卵生羊膜动物的重要方式。", why: ["A/B/C：均为胎盘功能。", "D：不是胎盘功能，是本题的排除项。"] },
+      { ch: 22, title: "同源与同功", q: "鸟翼与蝙蝠翼作为前肢都源于共同祖先的前肢结构，从这一角度看属于？", options: ["同源器官", "同功但绝不同源器官", "痕迹器官", "刺细胞"], answer: "A", analysis: "鸟翼和蝙蝠翼作为脊椎动物前肢具有共同来源，因此是同源器官；作为飞行器官也存在功能相似。", why: ["B：忽略了前肢的共同起源。", "C：二者不是退化残留结构。", "D：刺细胞属于腔肠动物。"] },
+      { ch: 22, title: "隔离与物种形成", q: "地理隔离促进物种形成的关键机制是？", options: ["阻断基因交流，使不同种群独立积累遗传差异", "使所有个体立即突变成新物种", "直接形成刺丝囊", "让动物失去繁殖能力"], answer: "A", analysis: "地理隔离本身不等于新种形成，但长期阻断基因交流后，自然选择、遗传漂变和突变积累可能导致生殖隔离。", why: ["B：物种形成通常是群体层面的长期过程。", "C：无关结构。", "D：并非隔离的一般直接结果。"] },
+      { ch: 23, title: "动物地理区", q: "澳洲区动物区系高度特有化的重要历史原因之一是？", options: ["长期地理隔离", "全年无任何生态位", "所有动物都来自人工饲养", "没有任何有袋类"], answer: "A", analysis: "澳洲长期与其他大陆隔离，有袋类等类群保留和辐射演化，形成高度特有的动物区系。", why: ["B/C：明显不符合生态与历史事实。", "D：澳洲区有袋类非常典型。"] },
+      { ch: 24, title: "限制因子", q: "在生态学中，限制因子的含义最接近哪项？", options: ["任何超过或低于生物耐受范围而限制生存繁殖的生态因子", "只指捕食者", "只指光照，其他条件都不重要", "只存在于实验室中"], answer: "A", analysis: "限制因子可能是温度、水分、盐度、食物、空间、天敌等，关键在于其接近或超过生物耐受界限。", why: ["B/C：把限制因子范围过度缩小。", "D：自然生态系统中普遍存在限制因子。"] },
+      { ch: 24, title: "能量流动", q: "生态系统能量流动通常呈单向并逐级递减，根本原因是？", options: ["每一营养级的呼吸消耗和热散失不可逆", "分解者能把全部热能重新变成太阳能", "能量可在食物链中无限循环", "消费者不进行呼吸作用"], answer: "A", analysis: "能量进入生态系统后在各营养级传递，同时大量以呼吸热形式散失，因此不能像物质那样循环。", why: ["B/C：能量不能在生态系统中无限循环。", "D：消费者当然进行呼吸作用。"] }
+    ];
+
+    const deck = document.getElementById("deck");
+    const filters = document.getElementById("filters");
+    const progress = document.getElementById("progress");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const letters = ["A", "B", "C", "D"];
+    let chapter = "all";
+    let cards = [];
+    let index = 0;
+    let touchX = 0;
+
+    function makeCards() {
+      const selected = chapter === "all" ? questions : questions.filter(q => q.ch === Number(chapter));
+      cards = selected.flatMap((q, idx) => [
+        { type: "q", q, num: idx + 1, total: selected.length },
+        { type: "a", q, num: idx + 1, total: selected.length },
+      ]);
+      index = Math.min(index, Math.max(cards.length - 1, 0));
+    }
+
+    function renderFilters() {
+      const chapters = [...new Set(questions.map(q => q.ch))].sort((a, b) => a - b);
+      filters.innerHTML = [
+        `<button class="filter ${chapter === "all" ? "active" : ""}" data-ch="all">全部</button>`,
+        ...chapters.map(ch => `<button class="filter ${chapter === String(ch) ? "active" : ""}" data-ch="${ch}">第${ch}章</button>`)
+      ].join("");
+      filters.querySelectorAll(".filter").forEach(btn => {
+        btn.addEventListener("click", () => {
+          chapter = btn.dataset.ch;
+          index = 0;
+          makeCards();
+          renderFilters();
+          render();
+        });
+      });
+    }
+
+    function renderQuestion(card) {
+      const q = card.q;
+      return `
+        <article class="card kind-question">
+          <div class="meta"><span class="tag">题目卡 · 第${q.ch}章</span><span>${card.num}/${card.total}</span></div>
+          <h2>${q.title}</h2>
+          <p class="stem">${q.q}</p>
+          <section class="options">
+            ${q.options.map((op, i) => `<div class="option"><b>${letters[i]}</b>${op}</div>`).join("")}
+          </section>
+          <p class="footer-hint">下一张是本题答案解析</p>
+        </article>`;
+    }
+
+    function renderAnswer(card) {
+      const q = card.q;
+      return `
+        <article class="card kind-answer">
+          <div class="meta"><span class="tag">答案卡 · 第${q.ch}章</span><span>${card.num}/${card.total}</span></div>
+          <h2>${q.title}</h2>
+          <div class="answer-line">正确答案：${q.answer}</div>
+          <p class="analysis">${q.analysis}</p>
+          <ul class="why">${q.why.map(item => `<li>${item}</li>`).join("")}</ul>
+          <p class="footer-hint">下一张进入下一题</p>
+        </article>`;
+    }
+
+    function render() {
+      if (!cards.length) {
+        deck.innerHTML = `<p style="text-align:center;color:#9ca3af;padding:40px 0">暂无题目</p>`;
+        progress.textContent = "--";
+        return;
+      }
+      const card = cards[index];
+      deck.innerHTML = card.type === "q" ? renderQuestion(card) : renderAnswer(card);
+      progress.textContent = `${index + 1} / ${cards.length}`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === cards.length - 1;
+    }
+
+    function go(delta) {
+      const next = index + delta;
+      if (next < 0 || next >= cards.length) return;
+      index = next;
+      render();
+    }
+
+    prevBtn.addEventListener("click", () => go(-1));
+    nextBtn.addEventListener("click", () => go(1));
+    deck.addEventListener("touchstart", e => { touchX = e.changedTouches[0].screenX; }, { passive: true });
+    deck.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    makeCards();
+    renderFilters();
+    render();
+  </script>
+</body>
+</html>
