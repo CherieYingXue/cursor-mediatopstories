@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d9488">
+  <title>普通动物学 · 知识卡片</title>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --accent:#2dd4bf; --accent-dim:#0d9488; --text:#f1f5f9; --muted:#94a3b8; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100dvh; }
+    header { position:sticky; top:0; z-index:10; background:rgba(15,23,42,.92); backdrop-filter:blur(12px); padding:12px 16px 8px; border-bottom:1px solid #334155; }
+    header h1 { margin:0; font-size:1.1rem; }
+    header p { margin:4px 0 0; font-size:.75rem; color:var(--muted); }
+    .chapters { display:flex; gap:8px; overflow-x:auto; padding:10px 16px; scrollbar-width:none; }
+    .ch-btn { flex:0 0 auto; border:1px solid #334155; background:var(--card); color:var(--muted); border-radius:20px; padding:6px 12px; font-size:.8rem; cursor:pointer; }
+    .ch-btn.active { background:var(--accent-dim); border-color:var(--accent); color:#fff; }
+    .deck { padding:8px 16px 88px; }
+    .card { background:linear-gradient(145deg,#1e293b,#0f172a); border:1px solid #334155; border-radius:16px; padding:20px; margin-bottom:12px; min-height:200px; }
+    .sec-id { display:inline-block; font-size:.7rem; color:var(--accent); background:rgba(45,212,191,.12); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
+    .card h2 { margin:0 0 12px; font-size:1.05rem; }
+    .card li { margin-bottom:10px; font-size:.92rem; line-height:1.55; color:#cbd5e1; }
+    nav.bottom { position:fixed; bottom:0; left:0; right:0; display:flex; gap:12px; padding:12px 16px; background:rgba(15,23,42,.95); border-top:1px solid #334155; }
+    nav.bottom button { flex:1; border:0; border-radius:12px; padding:14px; font-size:1rem; font-weight:600; background:var(--card); color:var(--text); }
+    nav.bottom button.primary { background:var(--accent-dim); color:#fff; }
+    .progress { font-size:.8rem; color:var(--muted); align-self:center; min-width:72px; text-align:center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>普通动物学（第4版）</h1>
+    <p>刘凌云 · 郑光美 · 知识卡片</p>
+  </header>
+  <nav class="chapters" id="chapterNav"></nav>
+  <main class="deck" id="deck"><p style="text-align:center;color:#94a3b8;padding:48px">加载中…</p></main>
+  <nav class="bottom">
+    <button type="button" id="prevBtn">上一张</button>
+    <span class="progress" id="progress">—</span>
+    <button type="button" id="nextBtn" class="primary">下一张</button>
+  </nav>
+  <script src="zoology_cards_data.js"></script>
+  <script>
+    const deckEl = document.getElementById("deck");
+    const navEl = document.getElementById("chapterNav");
+    const progressEl = document.getElementById("progress");
+    let flatCards = [], index = 0, data = window.ZOOLOGY_CARDS || [];
+    function buildFlatCards(chapters) {
+      const out = [];
+      for (const ch of chapters)
+        for (const sec of ch.sections || [])
+          out.push({ chapter: ch.chapter, chapterTitle: ch.title, ...sec });
+      return out;
+    }
+    function renderCard() {
+      if (!flatCards.length) return;
+      const c = flatCards[index];
+      deckEl.innerHTML = `<article class="card"><span class="sec-id">${c.chapterTitle} · ${c.id}</span><h2>${c.title}</h2><ul>${(c.points||[]).map(p=>`<li>${p}</li>`).join("")}</ul></article>`;
+      progressEl.textContent = `${index+1} / ${flatCards.length}`;
+      document.getElementById("prevBtn").disabled = index <= 0;
+      document.getElementById("nextBtn").disabled = index >= flatCards.length - 1;
+      navEl.querySelectorAll(".ch-btn").forEach(b => b.classList.toggle("active", Number(b.dataset.ch) === c.chapter));
+    }
+    function go(d) { const n = index + d; if (n < 0 || n >= flatCards.length) return; index = n; renderCard(); }
+    function buildNav() {
+      navEl.innerHTML = data.map(ch => `<button type="button" class="ch-btn" data-ch="${ch.chapter}">第${ch.chapter}章</button>`).join("");
+      navEl.querySelectorAll(".ch-btn").forEach(b => b.onclick = () => { const i = flatCards.findIndex(c => c.chapter === Number(b.dataset.ch)); if (i >= 0) { index = i; renderCard(); }});
+    }
+    document.getElementById("prevBtn").onclick = () => go(-1);
+    document.getElementById("nextBtn").onclick = () => go(1);
+    let tx = 0;
+    deckEl.addEventListener("touchstart", e => { tx = e.changedTouches[0].screenX; }, {passive:true});
+    deckEl.addEventListener("touchend", e => { const dx = e.changedTouches[0].screenX - tx; if (Math.abs(dx) >= 50) go(dx < 0 ? 1 : -1); }, {passive:true});
+    flatCards = buildFlatCards(data);
+    buildNav();
+    renderCard();
+  </script>
+</body>
+</html>

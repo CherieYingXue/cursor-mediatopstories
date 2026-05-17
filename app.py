@@ -688,6 +688,14 @@ def daily_ibo_test():
     return send_from_directory(BASE_DIR / "static", "daily-IBO-test.html")
 
 
+@app.route("/derivative-gaokao")
+def derivative_gaokao_cards():
+    """Mobile-friendly Gaokao derivative practice cards."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "derivative-gaokao-cards.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

@@ -1,0 +1,44 @@
+name: Deploy Static Pages (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "static/**"
+      - ".github/workflows/deploy-static-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build static site
+        run: |
+          mkdir -p public/derivative-gaokao
+          cp static/zoology-cards.html public/index.html
+          cp static/zoology_cards_data.json public/zoology_cards_data.json
+          cp static/derivative-gaokao-cards.html public/derivative-gaokao/index.html
+          touch public/.nojekyll
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
