@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d4ed8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>高考导数 · 仿真题卡（10题）</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <style>
+    :root {
+      --bg: #0c1222;
+      --card: #151d33;
+      --card2: #0f1629;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+      --accent2: #2563eb;
+      --answer: #86efac;
+      --border: rgba(96, 165, 250, .28);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(37, 99, 235, .28), transparent 36%),
+        linear-gradient(180deg, #0c1222 0%, #020617 100%);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 13px 16px 10px;
+      background: rgba(12, 18, 34, .94);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0; font-size: 1.08rem; }
+    header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.42;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 16px 4px;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(21, 29, 51, .9);
+      color: #bfdbfe;
+      padding: 7px 12px;
+      font-size: .8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--accent2);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    main { padding: 10px 16px calc(102px + var(--safe-bottom)); }
+    .card {
+      min-height: 58dvh;
+      border: 1px solid var(--border);
+      background: linear-gradient(155deg, rgba(21, 29, 51, .98), rgba(15, 22, 41, .98));
+      box-shadow: 0 22px 60px rgba(0, 0, 0, .35);
+      border-radius: 22px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+    .tag {
+      color: #dbeafe;
+      background: rgba(37, 99, 235, .35);
+      border: 1px solid rgba(96, 165, 250, .35);
+      padding: 4px 9px;
+      border-radius: 999px;
+    }
+    .kind-answer .tag {
+      background: rgba(34, 197, 94, .18);
+      border-color: rgba(34, 197, 94, .35);
+      color: #bbf7d0;
+    }
+    h2 { margin: 0; font-size: 1.02rem; line-height: 1.5; }
+    .stem, .analysis {
+      margin: 0;
+      color: #e2e8f0;
+      font-size: .96rem;
+      line-height: 1.75;
+    }
+    .answer-box {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(34, 197, 94, .1);
+      border: 1px solid rgba(34, 197, 94, .3);
+      color: var(--answer);
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .steps {
+      margin: 0;
+      padding-left: 1.15em;
+      color: #cbd5e1;
+      line-height: 1.68;
+      font-size: .92rem;
+    }
+    .steps li { margin-bottom: 10px; }
+    .footer-hint {
+      color: var(--muted);
+      font-size: .75rem;
+      text-align: center;
+      margin-top: 6px;
+    }
+    .katex { font-size: 1.02em; }
+    .bottom {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px calc(12px + var(--safe-bottom));
+      background: rgba(2, 6, 23, .94);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+    .bottom button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 10px;
+      background: var(--card);
+      color: var(--text);
+      font-weight: 700;
+      font-size: .95rem;
+    }
+    .bottom button.primary { background: var(--accent2); }
+    .bottom button:disabled { opacity: .35; }
+    .progress {
+      min-width: 78px;
+      color: var(--muted);
+      font-size: .76rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>高考导数 · 仿真题卡</h1>
+    <p>10 道解答题，由易到难。每张「题目卡」后紧跟「详解卡」，支持左右滑动翻页。</p>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="难度筛选"></nav>
+  <main id="deck" aria-live="polite"></main>
+  <nav class="bottom" aria-label="翻页">
+    <button type="button" id="prevBtn">上一张</button>
+    <span class="progress" id="progress">--</span>
+    <button type="button" id="nextBtn" class="primary">下一张</button>
+  </nav>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script>
+    const problems = [
+      {
+        id: 1, level: 1, stars: "★☆☆☆☆", title: "基础求导",
+        stem: "已知函数 \\(f(x)=3x^{2}-4x+5\\)，求 \\(f'(2)\\)。",
+        answer: "\\(f'(2)=8\\)",
+        steps: [
+          "先求导：\\(f'(x)=6x-4\\)。",
+          "代入 \\(x=2\\)：\\(f'(2)=6\\times2-4=8\\)。",
+          "考点：幂函数求导法则 \\((x^{n})'=nx^{n-1}\\) 与常数项导数为 0。"
+        ]
+      },
+      {
+        id: 2, level: 2, stars: "★★☆☆☆", title: "切线方程",
+        stem: "求曲线 \\(y=x^{3}-2x\\) 在点 \\((1,-1)\\) 处的切线方程。",
+        answer: "切线方程为 \\(y=x-2\\)",
+        steps: [
+          "求导：\\(y'=3x^{2}-2\\)，在 \\(x=1\\) 处斜率 \\(k=y'(1)=1\\)。",
+          "点斜式：\\(y-(-1)=1\\cdot(x-1)\\)，即 \\(y=x-2\\)。",
+          "检验：点 \\((1,-1)\\) 代入成立。考点：导数的几何意义为切线斜率。"
+        ]
+      },
+      {
+        id: 3, level: 3, stars: "★★☆☆☆", title: "单调区间",
+        stem: "设 \\(f(x)=x^{3}-3x^{2}+2\\)，求 \\(f(x)\\) 的单调递增区间与单调递减区间。",
+        answer: "递增：\\((-\\infty,0)\\cup(2,+\\infty)\\)；递减：\\((0,2)\\)",
+        steps: [
+          "\\(f'(x)=3x^{2}-6x=3x(x-2)\\)。",
+          "令 \\(f'(x)>0\\) 得 \\(x<0\\) 或 \\(x>2\\)；令 \\(f'(x)<0\\) 得 \\(0<x<2\\)。",
+          "列表或数轴标根：\\(x=0,2\\) 为分界点。",
+          "答：单调递增区间为 \\((-\\infty,0)\\) 和 \\((2,+\\infty)\\)，单调递减区间为 \\((0,2)\\)。"
+        ]
+      },
+      {
+        id: 4, level: 4, stars: "★★★☆☆", title: "极值",
+        stem: "求函数 \\(f(x)=x^{3}-6x^{2}+9x+1\\) 的极大值与极小值。",
+        answer: "极大值 \\(6\\)（在 \\(x=1\\)），极小值 \\(2\\)（在 \\(x=3\\)）",
+        steps: [
+          "\\(f'(x)=3x^{2}-12x+9=3(x-1)(x-3)\\)。",
+          "当 \\(x\\) 由负穿过 \\(1\\) 时 \\(f'\\) 由正变负，\\(x=1\\) 为极大点；穿过 \\(3\\) 时由负变正，\\(x=3\\) 为极小点。",
+          "\\(f(1)=1-6+9+1=6\\)，\\(f(3)=27-54+27+1=2\\)。",
+          "也可写：极大值 \\(f(1)=6\\)，极小值 \\(f(3)=2\\)。"
+        ]
+      },
+      {
+        id: 5, level: 5, stars: "★★★☆☆", title: "含参求导",
+        stem: "已知 \\(f(x)=ax^{2}+\\ln x\\)（\\(a\\) 为常数），且 \\(f'(1)=5\\)，求 \\(a\\) 的值。",
+        answer: "\\(a=2\\)",
+        steps: [
+          "定义域 \\(x>0\\)。\\(f'(x)=2ax+\\dfrac{1}{x}\\)。",
+          "代入 \\(x=1\\)：\\(f'(1)=2a+1=5\\)，得 \\(a=2\\)。",
+          "检验：\\(a=2\\) 时 \\(f'(x)=4x+\\dfrac{1}{x}>0\\)（\\(x>0\\)），与题意相容。",
+          "考点：对数求导 \\((\\ln x)'=\\dfrac{1}{x}\\) 与代入条件。"
+        ]
+      },
+      {
+        id: 6, level: 6, stars: "★★★☆☆", title: "证明不等式",
+        stem: "求证：当 \\(x>0\\) 时，\\(e^{x}>1+x\\)。",
+        answer: "构造 \\(g(x)=e^{x}-1-x\\)，证 \\(g(x)>0\\)（\\(x>0\\)）",
+        steps: [
+          "令 \\(g(x)=e^{x}-1-x\\)，则 \\(g'(x)=e^{x}-1\\)。",
+          "当 \\(x>0\\) 时 \\(g'(x)>0\\)，故 \\(g(x)\\) 在 \\((0,+\\infty)\\) 单调递增。",
+          "\\(g(0)=0\\)，所以对任意 \\(x>0\\) 有 \\(g(x)>g(0)=0\\)。",
+          "即 \\(e^{x}>1+x\\)。高考常见：移项作差、求导判单调。"
+        ]
+      },
+      {
+        id: 7, level: 7, stars: "★★★★☆", title: "函数最值",
+        stem: "求函数 \\(f(x)=x\\,e^{-x}\\)（\\(x\\in\\mathbb{R}\\)）的最大值，并写出取得最大值时的 \\(x\\)。",
+        answer: "最大值为 \\(\\dfrac{1}{e}\\)，在 \\(x=1\\) 处取得",
+        steps: [
+          "\\(f'(x)=e^{-x}-x e^{-x}=(1-x)e^{-x}\\)。",
+          "令 \\(f'(x)=0\\) 得 \\(x=1\\)（\\(e^{-x}>0\\) 恒成立）。",
+          "当 \\(x<1\\) 时 \\(f'>0\\)，当 \\(x>1\\) 时 \\(f'<0\\)，故 \\(x=1\\) 为极大点也是最大值点。",
+          "\\(f(1)=e^{-1}=\\dfrac{1}{e}\\)。乘积求导可用乘法法则或先取对数（本题直接求导即可）。"
+        ]
+      },
+      {
+        id: 8, level: 8, stars: "★★★★☆", title: "恒成立·参数",
+        stem: "已知 \\(f(x)=x^{2}-a\\ln x\\)（\\(x>0\\)），若 \\(f(x)\\) 在 \\((0,+\\infty)\\) 上单调递增，求实数 \\(a\\) 的取值范围。",
+        answer: "\\(a\\le 0\\)",
+        steps: [
+          "单调递增 \\(\\Leftrightarrow f'(x)\\ge 0\\) 在 \\((0,+\\infty)\\) 恒成立。",
+          "\\(f'(x)=2x-\\dfrac{a}{x}=\\dfrac{2x^{2}-a}{x}\\)。因 \\(x>0\\)，需 \\(2x^{2}-a\\ge 0\\) 恒成立。",
+          "即 \\(a\\le 2x^{2}\\) 对一切 \\(x>0\\) 成立。\\(2x^{2}\\) 在 \\((0,+\\infty)\\) 的最小值趋于 \\(0\\)（无上界下确界为 0）。",
+          "故 \\(a\\le 0\\)。当 \\(a=0\\) 时 \\(f'(x)=2x>0\\)（\\(x>0\\)），边界可取。"
+        ]
+      },
+      {
+        id: 9, level: 9, stars: "★★★★☆", title: "零点个数",
+        stem: "设 \\(f(x)=e^{x}-ax\\)（\\(a\\in\\mathbb{R}\\)），讨论方程 \\(f(x)=0\\) 的实根个数。",
+        answer: "\\(a<0\\)：1 个根；\\(a=0\\)：无根；\\(0<a<e\\)：2 个根；\\(a=e\\)：1 个根；\\(a>e\\)：无根",
+        steps: [
+          "\\(f'(x)=e^{x}-a\\)。若 \\(a\\le 0\\)，则 \\(f'(x)>0\\)，\\(f\\) 单调递增；又 \\(f(0)=1>0\\)，且 \\(x\\to-\\infty\\) 时 \\(f\\to -\\infty\\)（\\(a<0\\)），故 \\(a<0\\) 时恰 1 个根；\\(a=0\\) 时 \\(f=e^{x}>0\\) 无根。",
+          "若 \\(a>0\\)，令 \\(f'=0\\) 得 \\(x=\\ln a\\)，为极小点。极小值 \\(f(\\ln a)=a-a\\ln a=a(1-\\ln a)\\)。",
+          "两根 \\(\\Leftrightarrow\\) 极小值 \\(<0\\) 且端点趋于 \\(+\infty\\)：\\(0<a<e\\) 时 \\(1-\\ln a>0\\) 且 \\(f(\\ln a)<0\\)，有 2 根。",
+          "\\(a=e\\) 时极小值为 0，1 个根；\\(a>e\\) 时极小值 \\(>0\\)，无根。"
+        ]
+      },
+      {
+        id: 10, level: 10, stars: "★★★★★", title: "压轴·双零点",
+        stem: "已知 \\(f(x)=\\ln x-ax\\)（\\(a>0\\)），若 \\(f(x)\\) 有两个零点，求 \\(a\\) 的取值范围。",
+        answer: "\\(0<a<\\dfrac{1}{e}\\)",
+        steps: [
+          "定义域 \\(x>0\\)。\\(f'(x)=\\dfrac{1}{x}-a=\\dfrac{1-ax}{x}\\)。",
+          "令 \\(f'(x)=0\\) 得 \\(x=\\dfrac{1}{a}\\)。当 \\(0<x<\\dfrac{1}{a}\\) 时 \\(f'>0\\)，当 \\(x>\\dfrac{1}{a}\\) 时 \\(f'<0\\)，故 \\(x=\\dfrac{1}{a}\\) 为极大点。",
+          "极大值 \\(f\\!\\left(\\dfrac{1}{a}\\right)=\\ln\\dfrac{1}{a}-1=-\\ln a-1\\)。",
+          "两个零点 \\(\\Leftrightarrow\\) 极大值 \\(>0\\) 且两端趋于 \\(-\\infty\\)：\\(-\\ln a-1>0\\Rightarrow \\ln a<-1\\Rightarrow 0<a<\\dfrac{1}{e}\\)。",
+          "又 \\(x\\to 0^{+}\\) 时 \\(\\ln x\\to-\\infty\\)，\\(x\\to+\\infty\\) 时 \\(f\\to-\\infty\\)（\\(a>0\\)），故在该范围内确有两个零点。边界 \\(a=\\dfrac{1}{e}\\) 时极大值为 0，仅一个零点。"
+        ]
+      }
+    ];
+
+    const deck = document.getElementById("deck");
+    const tabs = document.getElementById("tabs");
+    const progress = document.getElementById("progress");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let filter = "all";
+    let cards = [];
+    let index = 0;
+    let touchX = 0;
+
+    function typeset(el) {
+      if (window.renderMathInElement) {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: "\\(", right: "\\)", display: false },
+            { left: "\\[", right: "\\]", display: true }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function makeCards() {
+      const list = filter === "all"
+        ? problems
+        : problems.filter(p => p.level === Number(filter));
+      cards = list.flatMap((p, i) => [
+        { type: "q", p, num: i + 1, total: list.length },
+        { type: "a", p, num: i + 1, total: list.length }
+      ]);
+      index = Math.min(index, Math.max(cards.length - 1, 0));
+    }
+
+    function renderTabs() {
+      tabs.innerHTML = [
+        `<button type="button" class="tab ${filter === "all" ? "active" : ""}" data-f="all">全部</button>`,
+        ...problems.map(p =>
+          `<button type="button" class="tab ${filter === String(p.level) ? "active" : ""}" data-f="${p.level}">第${p.id}题</button>`
+        )
+      ].join("");
+      tabs.querySelectorAll(".tab").forEach(btn => {
+        btn.onclick = () => {
+          filter = btn.dataset.f;
+          index = 0;
+          makeCards();
+          renderTabs();
+          render();
+        };
+      });
+    }
+
+    function renderQuestion(card) {
+      const p = card.p;
+      return `
+        <article class="card kind-question">
+          <div class="meta"><span class="tag">题目 · 难度 ${p.stars}</span><span>${card.num}/${card.total}</span></div>
+          <h2>第 ${p.id} 题 · ${p.title}</h2>
+          <p class="stem">${p.stem}</p>
+          <p class="footer-hint">先自己做，再点「下一张」看答案与详解</p>
+        </article>`;
+    }
+
+    function renderAnswer(card) {
+      const p = card.p;
+      return `
+        <article class="card kind-answer">
+          <div class="meta"><span class="tag">详解 · 第 ${p.id} 题</span><span>${card.num}/${card.total}</span></div>
+          <h2>${p.title}</h2>
+          <div class="answer-box">答案：${p.answer}</div>
+          <ol class="steps">${p.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+          <p class="footer-hint">下一张进入下一题</p>
+        </article>`;
+    }
+
+    function render() {
+      if (!cards.length) {
+        deck.innerHTML = `<p style="text-align:center;color:#94a3b8;padding:40px 0">暂无题目</p>`;
+        progress.textContent = "--";
+        return;
+      }
+      const card = cards[index];
+      deck.innerHTML = card.type === "q" ? renderQuestion(card) : renderAnswer(card);
+      typeset(deck);
+      progress.textContent = `${index + 1} / ${cards.length}`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === cards.length - 1;
+    }
+
+    function go(d) {
+      const n = index + d;
+      if (n < 0 || n >= cards.length) return;
+      index = n;
+      render();
+    }
+
+    prevBtn.onclick = () => go(-1);
+    nextBtn.onclick = () => go(1);
+    deck.addEventListener("touchstart", e => { touchX = e.changedTouches[0].screenX; }, { passive: true });
+    deck.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    makeCards();
+    renderTabs();
+    render();
+  </script>
+</body>
+</html>
