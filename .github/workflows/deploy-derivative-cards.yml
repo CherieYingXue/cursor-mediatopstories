@@ -1,0 +1,31 @@
+name: Deploy Derivative Gaokao Cards (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "static/derivative-gaokao-cards.html"
+      - ".github/workflows/deploy-derivative-cards.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build static site
+        run: |
+          mkdir -p public/derivative-gaokao
+          cp static/derivative-gaokao-cards.html public/derivative-gaokao/index.html
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          keep_files: true
