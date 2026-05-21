@@ -122,9 +122,10 @@
           </g>
         </defs>
 
-        <!-- 昼夜：圆内深灰为底；日出—日落天际线上方填浅蓝 -->
+        <!-- 浅蓝=天际线上方；深灰仅天际线下方（日出—日落之间）；其余为表盘底色 -->
         <g clip-path="url(#dialClip)">
-          <circle cx="200" cy="200" r="188" fill="var(--night)"/>
+          <circle cx="200" cy="200" r="188" fill="#252a3d"/>
+          <path id="faceNight" fill="var(--night)"/>
           <path id="faceDay" fill="var(--day)"/>
           <path id="horizonRidge" fill="none" stroke="rgba(45,55,72,0.7)" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round"/>
@@ -164,6 +165,7 @@
   const eventLabelsG = document.getElementById("eventLabels");
   const markerG = document.getElementById("marker");
   const faceDay = document.getElementById("faceDay");
+  const faceNight = document.getElementById("faceNight");
   const horizonRidge = document.getElementById("horizonRidge");
 
   const NS = "http://www.w3.org/2000/svg";
@@ -222,9 +224,9 @@
   }
 
   /**
-   * 日出—日落为起伏天际线（端点对准表盘时刻）。
-   * 白天 = 天际线与表盘昼弧（经12点）之间的区域（屏幕上方）；
-   * 黑夜 = 其余圆内区域（底层深灰）。
+   * 日出—日落天际线（端点对准表盘时刻）。
+   * 浅蓝：天际线之上 + 昼弧围成的区域；
+   * 深灰：仅天际线之下、日出—日落之间的扇形（不铺满整圆）。
    */
   function buildSkylinePaths(sunrise, sunset) {
     const riseDeg = minutesToAngle(minutesOfDay(sunrise));
@@ -245,7 +247,7 @@
 
       topRim.push(angleToXY(dayDeg, R));
       bottomRim.push(angleToXY(nightDeg, R));
-      ridge.push(angleToXY(dayDeg, Math.max(R - wave, R * 0.55)));
+      ridge.push(angleToXY(dayDeg, Math.max(R - wave, R * 0.62)));
     }
 
     const S = topRim[0];
@@ -254,11 +256,12 @@
     ridge[steps] = E;
 
     const dayPolygon = topRim.concat(ridge.slice(1, -1).reverse());
-    const ridgeLine = ridge.slice();
+    const nightPolygon = ridge.concat(bottomRim.slice(0, -1).reverse());
 
     return {
       dayPath: polyPath(dayPolygon, true),
-      ridge: polyPath(ridgeLine, false),
+      nightPath: polyPath(nightPolygon, true),
+      ridge: polyPath(ridge, false),
       S,
       E,
     };
@@ -267,6 +270,7 @@
   function buildSkyFace(sunrise, sunset) {
     const p = buildSkylinePaths(sunrise, sunset);
     faceDay.setAttribute("d", p.dayPath);
+    faceNight.setAttribute("d", p.nightPath);
     horizonRidge.setAttribute("d", p.ridge);
     return p;
   }
