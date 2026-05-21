@@ -205,45 +205,62 @@
     return { sunrise: t.sunrise, sunset: t.sunset };
   }
 
-  /** 天际线：中心略下，叠加正弦形成小幅山川起伏 */
-  function skylineY(x) {
-    const t = (x - CX) / R;
-    return CY + 6 * Math.sin(t * 2.35) + 3.5 * Math.sin(t * 5.6 + 0.5)
-      + 2 * Math.sin(t * 10.5 + 1.1) + 1.2 * Math.sin(t * 17 + 2);
-  }
+  /**
+   * 天际线：左端 = 日出时刻在表盘上的位置，右端 = 日落时刻；
+   * 沿昼弧略向内起伏；上方（昼弧一侧）天蓝，下方（夜弧一侧）深灰，均裁剪在圆内。
+   */
+  function buildSkylinePaths(sunrise, sunset) {
+    const riseDeg = minutesToAngle(minutesOfDay(sunrise));
+    const setDeg = minutesToAngle(minutesOfDay(sunset));
+    const daySweep = (setDeg - riseDeg + 360) % 360;
+    const nightSweep = (360 - daySweep) % 360;
 
-  function buildSkylinePaths() {
-    const leftX = CX - R;
-    const rightX = CX + R;
-    const steps = 80;
-    const pts = [];
+    const S = angleToXY(riseDeg, R);
+    const E = angleToXY(setDeg, R);
+    const steps = 72;
+    const ridgePts = [];
+
     for (let i = 0; i <= steps; i++) {
-      const x = leftX + ((rightX - leftX) * i) / steps;
-      let y = skylineY(x);
-      const dx = x - CX;
-      const maxY = CY + Math.sqrt(Math.max(0, R * R - dx * dx)) - 1;
-      const minY = CY - Math.sqrt(Math.max(0, R * R - dx * dx)) + 1;
-      y = Math.min(maxY, Math.max(minY, y));
-      pts.push({ x: +x.toFixed(2), y: +y.toFixed(2) });
+      const t = i / steps;
+      const deg = (riseDeg + daySweep * t) % 360;
+      const wave =
+        7 * Math.sin(t * Math.PI * 3.2) +
+        4 * Math.sin(t * Math.PI * 7.4 + 0.7) +
+        2.2 * Math.sin(t * Math.PI * 12.5 + 1.4);
+      ridgePts.push(angleToXY(deg, Math.max(R - wave, R * 0.55)));
     }
-    const lx = pts[0].x;
-    const ly = pts[0].y;
-    const rx = pts[pts.length - 1].x;
-    const ry = pts[pts.length - 1].y;
-    let ridge = "M " + lx + " " + ly;
-    for (let i = 1; i < pts.length; i++) {
-      ridge += " L " + pts[i].x + " " + pts[i].y;
+    ridgePts[0] = S;
+    ridgePts[steps] = E;
+
+    let ridge = "M " + S.x.toFixed(2) + " " + S.y.toFixed(2);
+    for (let i = 1; i < ridgePts.length; i++) {
+      ridge += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
     }
-    const dayPath = ridge + " A " + R + " " + R + " 0 1 1 " + lx + " " + ly + " Z";
-    const nightPath = ridge + " A " + R + " " + R + " 0 1 0 " + lx + " " + ly + " Z";
-    return { dayPath, nightPath, ridge };
+
+    const dayLarge = daySweep > 180 ? 1 : 0;
+    const nightLarge = nightSweep > 180 ? 1 : 0;
+    const dayPath =
+      ridge + " A " + R + " " + R + " 0 " + dayLarge + ",0 " +
+      S.x.toFixed(2) + " " + S.y.toFixed(2) + " Z";
+
+    let nightPath = "M " + S.x.toFixed(2) + " " + S.y.toFixed(2);
+    nightPath +=
+      " A " + R + " " + R + " 0 " + nightLarge + ",1 " +
+      E.x.toFixed(2) + " " + E.y.toFixed(2);
+    for (let i = ridgePts.length - 1; i >= 0; i--) {
+      nightPath += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
+    }
+    nightPath += " Z";
+
+    return { dayPath, nightPath, ridge, S, E };
   }
 
-  function buildSkyFace() {
-    const p = buildSkylinePaths();
+  function buildSkyFace(sunrise, sunset) {
+    const p = buildSkylinePaths(sunrise, sunset);
     faceDay.setAttribute("d", p.dayPath);
     faceNight.setAttribute("d", p.nightPath);
     horizonRidge.setAttribute("d", p.ridge);
+    return p;
   }
 
   function buildTicks() {
@@ -335,9 +352,10 @@
     sunriseText.textContent = formatHM(sunrise);
     sunsetText.textContent = formatHM(sunset);
 
+    const sky = buildSkyFace(sunrise, sunset);
     eventLabelsG.innerHTML = "";
-    placeHorizonLabel("日出", CX - R + 18, CY - 12, "#fef3c7");
-    placeHorizonLabel("日落", CX + R - 18, CY - 12, "#fde68a");
+    placeHorizonLabel("日出", sky.S.x, sky.S.y - 16, "#fef3c7");
+    placeHorizonLabel("日落", sky.E.x, sky.E.y - 16, "#fde68a");
 
     setMarker(now, sunrise, sunset);
     locText.textContent = locLabel;
@@ -368,7 +386,6 @@
     );
   }
 
-  buildSkyFace();
   buildTicks();
   locBtn.addEventListener("click", requestLocation);
   requestLocation();
