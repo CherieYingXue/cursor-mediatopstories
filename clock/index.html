@@ -9,8 +9,8 @@
   <style>
     :root {
       --bg: #1a1a2e;
-      --day: #9ed4fa;
-      --night: #3a3f4a;
+      --day: #6ec8f0;
+      --night: #3d4452;
       --ring: #e8eef4;
       --text: #f0f4f8;
       --muted: #94a3b8;
@@ -127,7 +127,7 @@
           <circle cx="200" cy="200" r="188" fill="#252a3d"/>
           <path id="faceNight" fill="var(--night)"/>
           <path id="faceDay" fill="var(--day)"/>
-          <path id="horizonRidge" fill="none" stroke="rgba(45,55,72,0.7)" stroke-width="2"
+          <path id="horizonRidge" fill="none" stroke="rgba(126,210,248,0.95)" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round"/>
         </g>
 
@@ -208,10 +208,19 @@
 
   function waveOffset(t) {
     return (
-      6 * Math.sin(t * Math.PI * 3.2) +
-      3.5 * Math.sin(t * Math.PI * 7.4 + 0.7) +
-      2 * Math.sin(t * Math.PI * 12.5 + 1.4)
+      5 * Math.sin(t * Math.PI * 4.1) +
+      3 * Math.sin(t * Math.PI * 8.3 + 0.6) +
+      1.8 * Math.sin(t * Math.PI * 15 + 1.2)
     );
+  }
+
+  function clampToCircle(x, y) {
+    const dx = x - CX;
+    const dy = y - CY;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d <= R - 0.5) return { x, y };
+    const s = (R - 1) / d;
+    return { x: CX + dx * s, y: CY + dy * s };
   }
 
   function polyPath(points, close) {
@@ -224,36 +233,38 @@
   }
 
   /**
-   * 日出—日落天际线（端点对准表盘时刻）。
-   * 浅蓝：天际线之上 + 昼弧围成的区域；
-   * 深灰：仅天际线之下、日出—日落之间的扇形（不铺满整圆）。
+   * 参考图：日出—日落之间一条近似水平的起伏天际线；
+   * 端点在表盘对应时刻；线上方浅蓝（白天），线下方深灰（夜晚）。
    */
   function buildSkylinePaths(sunrise, sunset) {
     const riseDeg = minutesToAngle(minutesOfDay(sunrise));
     const setDeg = minutesToAngle(minutesOfDay(sunset));
     const daySweep = (setDeg - riseDeg + 360) % 360;
     const nightSweep = 360 - daySweep;
-    const steps = 80;
+    const steps = 88;
 
+    const S = angleToXY(riseDeg, R);
+    const E = angleToXY(setDeg, R);
     const topRim = [];
-    const ridge = [];
     const bottomRim = [];
+    const ridge = [];
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const dayDeg = (riseDeg + daySweep * t) % 360;
       const nightDeg = (riseDeg - nightSweep * t + 360) % 360;
-      const wave = waveOffset(t);
-
       topRim.push(angleToXY(dayDeg, R));
       bottomRim.push(angleToXY(nightDeg, R));
-      ridge.push(angleToXY(dayDeg, Math.max(R - wave, R * 0.62)));
     }
 
-    const S = topRim[0];
-    const E = topRim[steps];
-    ridge[0] = S;
-    ridge[steps] = E;
+    ridge.push(S);
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const x = S.x + (E.x - S.x) * t;
+      const y = S.y + (E.y - S.y) * t - waveOffset(t);
+      ridge.push(clampToCircle(x, y));
+    }
+    ridge.push(E);
 
     const dayPolygon = topRim.concat(ridge.slice(1, -1).reverse());
     const nightPolygon = ridge.concat(bottomRim.slice(0, -1).reverse());
@@ -366,8 +377,8 @@
 
     const sky = buildSkyFace(sunrise, sunset);
     eventLabelsG.innerHTML = "";
-    placeHorizonLabel("日出", sky.S.x, sky.S.y - 16, "#fef3c7");
-    placeHorizonLabel("日落", sky.E.x, sky.E.y - 16, "#fde68a");
+    placeHorizonLabel("日出", sky.S.x, sky.S.y - 18, "#fef3c7");
+    placeHorizonLabel("日落", sky.E.x, sky.E.y + 14, "#fde68a");
 
     setMarker(now, sunrise, sunset);
     locText.textContent = locLabel;
