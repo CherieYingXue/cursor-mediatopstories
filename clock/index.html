@@ -98,6 +98,9 @@
     <div class="clock-wrap">
       <svg viewBox="0 0 400 400" aria-label="24小时昼夜表盘">
         <defs>
+          <clipPath id="dialClip">
+            <circle cx="200" cy="200" r="188"/>
+          </clipPath>
           <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="2.5" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -119,13 +122,13 @@
           </g>
         </defs>
 
-        <!-- 夜晚底色 + 按日出日落角度的白天扇形 -->
-        <circle id="faceNight" cx="200" cy="200" r="188" fill="var(--night)"/>
-        <path id="faceDay" fill="var(--day)"/>
-
-        <!-- 日出 / 日落径向分界线 -->
-        <line id="lineSunrise" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
-        <line id="lineSunset" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+        <!-- 昼夜填色：上蓝下灰，裁剪在圆内；交界为起伏天际线 -->
+        <g clip-path="url(#dialClip)">
+          <path id="faceNight" fill="var(--night)"/>
+          <path id="faceDay" fill="var(--day)"/>
+          <path id="horizonRidge" fill="none" stroke="rgba(30,41,59,0.55)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
 
         <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
 
@@ -161,8 +164,8 @@
   const eventLabelsG = document.getElementById("eventLabels");
   const markerG = document.getElementById("marker");
   const faceDay = document.getElementById("faceDay");
-  const lineSunrise = document.getElementById("lineSunrise");
-  const lineSunset = document.getElementById("lineSunset");
+  const faceNight = document.getElementById("faceNight");
+  const horizonRidge = document.getElementById("horizonRidge");
 
   const NS = "http://www.w3.org/2000/svg";
   let lat = 39.9042;
@@ -202,25 +205,45 @@
     return { sunrise: t.sunrise, sunset: t.sunset };
   }
 
-  /** 扇形路径：从 startDeg 沿顺时针扫到 endDeg */
-  function sectorPath(startDeg, endDeg) {
-    const s = angleToXY(startDeg, R);
-    const e = angleToXY(endDeg, R);
-    let sweep = (endDeg - startDeg + 360) % 360;
-    if (sweep < 0.001) return "";
-    const large = sweep > 180 ? 1 : 0;
-    return "M" + CX + "," + CY +
-      " L" + s.x + "," + s.y +
-      " A" + R + "," + R + " 0 " + large + ",1 " + e.x + "," + e.y +
-      " Z";
+  /** 天际线：中心略下，叠加正弦形成小幅山川起伏 */
+  function skylineY(x) {
+    const t = (x - CX) / R;
+    return CY + 6 * Math.sin(t * 2.35) + 3.5 * Math.sin(t * 5.6 + 0.5)
+      + 2 * Math.sin(t * 10.5 + 1.1) + 1.2 * Math.sin(t * 17 + 2);
   }
 
-  function setRadialLine(lineEl, deg) {
-    const outer = angleToXY(deg, R);
-    lineEl.setAttribute("x1", CX);
-    lineEl.setAttribute("y1", CY);
-    lineEl.setAttribute("x2", outer.x);
-    lineEl.setAttribute("y2", outer.y);
+  function buildSkylinePaths() {
+    const leftX = CX - R;
+    const rightX = CX + R;
+    const steps = 80;
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = leftX + ((rightX - leftX) * i) / steps;
+      let y = skylineY(x);
+      const dx = x - CX;
+      const maxY = CY + Math.sqrt(Math.max(0, R * R - dx * dx)) - 1;
+      const minY = CY - Math.sqrt(Math.max(0, R * R - dx * dx)) + 1;
+      y = Math.min(maxY, Math.max(minY, y));
+      pts.push({ x: +x.toFixed(2), y: +y.toFixed(2) });
+    }
+    const lx = pts[0].x;
+    const ly = pts[0].y;
+    const rx = pts[pts.length - 1].x;
+    const ry = pts[pts.length - 1].y;
+    let ridge = "M " + lx + " " + ly;
+    for (let i = 1; i < pts.length; i++) {
+      ridge += " L " + pts[i].x + " " + pts[i].y;
+    }
+    const dayPath = ridge + " A " + R + " " + R + " 0 1 1 " + lx + " " + ly + " Z";
+    const nightPath = ridge + " A " + R + " " + R + " 0 1 0 " + lx + " " + ly + " Z";
+    return { dayPath, nightPath, ridge };
+  }
+
+  function buildSkyFace() {
+    const p = buildSkylinePaths();
+    faceDay.setAttribute("d", p.dayPath);
+    faceNight.setAttribute("d", p.nightPath);
+    horizonRidge.setAttribute("d", p.ridge);
   }
 
   function buildTicks() {
@@ -253,6 +276,19 @@
     }
   }
 
+  function placeHorizonLabel(text, x, y, color) {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", x);
+    t.setAttribute("y", y);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("fill", color);
+    t.setAttribute("font-size", "9");
+    t.setAttribute("font-weight", "600");
+    t.setAttribute("opacity", "0.85");
+    t.textContent = text;
+    eventLabelsG.appendChild(t);
+  }
+
   function placeEventLabel(text, time, color) {
     const deg = minutesToAngle(minutesOfDay(time));
     const p = angleToXY(deg, LABEL_R - 22);
@@ -272,14 +308,6 @@
     const riseM = minutesOfDay(sunrise);
     const setM = minutesOfDay(sunset);
     return m >= riseM && m < setM;
-  }
-
-  function updateFace(sunrise, sunset) {
-    const riseDeg = minutesToAngle(minutesOfDay(sunrise));
-    const setDeg = minutesToAngle(minutesOfDay(sunset));
-    faceDay.setAttribute("d", sectorPath(riseDeg, setDeg));
-    setRadialLine(lineSunrise, riseDeg);
-    setRadialLine(lineSunset, setDeg);
   }
 
   function setMarker(now, sunrise, sunset) {
@@ -307,10 +335,9 @@
     sunriseText.textContent = formatHM(sunrise);
     sunsetText.textContent = formatHM(sunset);
 
-    updateFace(sunrise, sunset);
     eventLabelsG.innerHTML = "";
-    placeEventLabel("日出", sunrise, "#fef3c7");
-    placeEventLabel("日落", sunset, "#fde68a");
+    placeHorizonLabel("日出", CX - R + 18, CY - 12, "#fef3c7");
+    placeHorizonLabel("日落", CX + R - 18, CY - 12, "#fde68a");
 
     setMarker(now, sunrise, sunset);
     locText.textContent = locLabel;
@@ -341,6 +368,7 @@
     );
   }
 
+  buildSkyFace();
   buildTicks();
   locBtn.addEventListener("click", requestLocation);
   requestLocation();
