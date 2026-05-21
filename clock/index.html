@@ -172,14 +172,21 @@
 
   function pad(n) { return String(n).padStart(2, "0"); }
 
-  /** 24 小时制：0 点在正下方，顺时针；0°=右侧，90°=上方 */
+  /**
+   * 24 小时刻度方位（顺时针）：
+   * 0 点正下方，6 点左侧，12 点正上方，18 点右侧。
+   * 角度 = 从正下方起算的顺时针度数。
+   */
   function minutesToAngle(min) {
-    return (270 - (min / 1440) * 360 + 360) % 360;
+    return (min / 1440) * 360;
   }
 
   function angleToXY(deg, radius) {
-    const rad = (deg - 90) * Math.PI / 180;
-    return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) };
+    const rad = (deg * Math.PI) / 180;
+    return {
+      x: CX + radius * Math.sin(rad),
+      y: CY + radius * Math.cos(rad),
+    };
   }
 
   function minutesOfDay(d) {
@@ -195,7 +202,7 @@
     return { sunrise: t.sunrise, sunset: t.sunset };
   }
 
-  /** 扇形路径：从 startDeg 顺时针扫到 endDeg（度数，0=右） */
+  /** 扇形路径：从 startDeg 沿顺时针扫到 endDeg */
   function sectorPath(startDeg, endDeg) {
     const s = angleToXY(startDeg, R);
     const e = angleToXY(endDeg, R);
@@ -204,7 +211,7 @@
     const large = sweep > 180 ? 1 : 0;
     return "M" + CX + "," + CY +
       " L" + s.x + "," + s.y +
-      " A" + R + "," + R + " 0 " + large + ",0 " + e.x + "," + e.y +
+      " A" + R + "," + R + " 0 " + large + ",1 " + e.x + "," + e.y +
       " Z";
   }
 
