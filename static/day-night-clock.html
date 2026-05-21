@@ -9,8 +9,8 @@
   <style>
     :root {
       --bg: #1a1a2e;
-      --day: #5eb8f0;
-      --night: #3d4450;
+      --day: #9ed4fa;
+      --night: #3a3f4a;
       --ring: #e8eef4;
       --text: #f0f4f8;
       --muted: #94a3b8;
@@ -122,10 +122,11 @@
           </g>
         </defs>
 
-        <!-- 昼夜填色：上蓝下灰，裁剪在圆内；交界为起伏天际线 -->
+        <!-- 昼夜：交界线（日出—日落）上方浅蓝=白天，下方深灰=黑夜 -->
         <g clip-path="url(#dialClip)">
-          <path id="faceNight" fill="var(--night)"/>
+          <circle cx="200" cy="200" r="188" fill="var(--night)"/>
           <path id="faceDay" fill="var(--day)"/>
+          <path id="faceNight" fill="var(--night)"/>
           <path id="horizonRidge" fill="none" stroke="rgba(30,41,59,0.55)" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round"/>
         </g>
@@ -187,7 +188,7 @@
   function angleToXY(deg, radius) {
     const rad = (deg * Math.PI) / 180;
     return {
-      x: CX + radius * Math.sin(rad),
+      x: CX - radius * Math.sin(rad),
       y: CY + radius * Math.cos(rad),
     };
   }
@@ -206,8 +207,8 @@
   }
 
   /**
-   * 天际线：左端 = 日出时刻在表盘上的位置，右端 = 日落时刻；
-   * 沿昼弧略向内起伏；上方（昼弧一侧）天蓝，下方（夜弧一侧）深灰，均裁剪在圆内。
+   * 日出—日落连线为起伏天际线（端点在表盘对应时刻）。
+   * 屏幕坐标：交界线上方(y更小)=浅蓝白天；下方=深灰黑夜。
    */
   function buildSkylinePaths(sunrise, sunset) {
     const riseDeg = minutesToAngle(minutesOfDay(sunrise));
@@ -224,10 +225,10 @@
       const t = i / steps;
       const deg = (riseDeg + daySweep * t) % 360;
       const wave =
-        7 * Math.sin(t * Math.PI * 3.2) +
-        4 * Math.sin(t * Math.PI * 7.4 + 0.7) +
-        2.2 * Math.sin(t * Math.PI * 12.5 + 1.4);
-      ridgePts.push(angleToXY(deg, Math.max(R - wave, R * 0.55)));
+        6 * Math.sin(t * Math.PI * 3.2) +
+        3.5 * Math.sin(t * Math.PI * 7.4 + 0.7) +
+        2 * Math.sin(t * Math.PI * 12.5 + 1.4);
+      ridgePts.push(angleToXY(deg, Math.max(R - wave, R * 0.58)));
     }
     ridgePts[0] = S;
     ridgePts[steps] = E;
@@ -237,15 +238,19 @@
       ridge += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
     }
 
-    const dayLarge = daySweep > 180 ? 1 : 0;
-    const nightLarge = nightSweep > 180 ? 1 : 0;
+    const topArcLarge = daySweep > 180 ? 1 : 0;
+    const bottomArcLarge = nightSweep > 180 ? 1 : 0;
+
+    // 白天：天际线 → 沿表盘昼弧(经12点)回到日出
     const dayPath =
-      ridge + " A " + R + " " + R + " 0 " + dayLarge + ",0 " +
+      ridge +
+      " A " + R + " " + R + " 0 " + topArcLarge + ",0 " +
       S.x.toFixed(2) + " " + S.y.toFixed(2) + " Z";
 
+    // 黑夜：日出 → 沿表盘夜弧(经0点)到日落 → 沿天际线返回
     let nightPath = "M " + S.x.toFixed(2) + " " + S.y.toFixed(2);
     nightPath +=
-      " A " + R + " " + R + " 0 " + nightLarge + ",1 " +
+      " A " + R + " " + R + " 0 " + bottomArcLarge + ",1 " +
       E.x.toFixed(2) + " " + E.y.toFixed(2);
     for (let i = ridgePts.length - 1; i >= 0; i--) {
       nightPath += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
