@@ -72,7 +72,7 @@
       max-width: 340px;
       user-select: none;
     }
-    .meta strong { color: #fcd34d; font-weight: 600; }
+    .meta strong { font-weight: 600; }
     .meta .sun-line strong { color: #fbbf24; }
     .meta .moon-line strong { color: #c4b5fd; }
     .loc-btn {
@@ -98,70 +98,48 @@
     <div class="clock-wrap">
       <svg viewBox="0 0 400 400" aria-label="24小时昼夜表盘">
         <defs>
-          <clipPath id="clipUpper">
-            <rect x="0" y="0" width="400" height="200"/>
-          </clipPath>
-          <clipPath id="clipLower">
-            <rect x="0" y="200" width="400" height="200"/>
-          </clipPath>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="b"/>
+          <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-        </defs>
-
-        <!-- 表盘底色：上白天蓝、下夜深灰 -->
-        <circle cx="200" cy="200" r="188" fill="var(--night)"/>
-        <circle cx="200" cy="200" r="188" fill="var(--day)" clip-path="url(#clipUpper)"/>
-
-        <!-- 昼夜交界水平线 -->
-        <line x1="12" y1="200" x2="388" y2="200" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
-
-        <!-- 外圈 -->
-        <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
-
-        <!-- 24 小时刻度（由 JS 绘制） -->
-        <g id="ticks"></g>
-
-        <!-- 方位标注 -->
-        <text x="200" y="36" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" opacity="0.95">12</text>
-        <text x="200" y="378" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">0</text>
-        <text id="labelLeft" x="28" y="205" text-anchor="middle" fill="#fef3c7" font-size="11" font-weight="600">日出</text>
-        <text id="labelRight" x="372" y="205" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="600">日落</text>
-
-        <!-- 太阳 / 月亮指针 -->
-        <g id="pointer" filter="url(#glow)">
-          <line id="pointerLine" x1="200" y1="200" x2="200" y2="52"
-                stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
-          <g id="pointerIcon" transform="translate(200, 52)">
-            <!-- 默认太阳，JS 切换 -->
-            <g id="iconSun">
-              <circle r="18" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
-              <g stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round">
-                <line y1="-26" y2="-32"/><line y1="26" y2="32"/>
-                <line x1="-26" x2="-32"/><line x1="26" x2="32"/>
-                <line x1="-18" y1="-18" x2="-23" y2="-23"/>
-                <line x1="18" y1="18" x2="23" y2="23"/>
-                <line x1="18" y1="-18" x2="23" y2="-23"/>
-                <line x1="-18" y1="18" x2="-23" y2="23"/>
-              </g>
-            </g>
-            <g id="iconMoon" display="none">
-              <circle r="18" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/>
-              <circle cx="8" cy="-4" r="14" fill="#1a1a2e"/>
+          <g id="symSun" filter="url(#glow)">
+            <circle r="16" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+            <g stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round">
+              <line y1="-22" y2="-28"/><line y1="22" y2="28"/>
+              <line x1="-22" x2="-28"/><line x1="22" x2="28"/>
+              <line x1="-16" y1="-16" x2="-20" y2="-20"/>
+              <line x1="16" y1="16" x2="20" y2="20"/>
+              <line x1="16" y1="-16" x2="20" y2="-20"/>
+              <line x1="-16" y1="16" x2="-20" y2="20"/>
             </g>
           </g>
-        </g>
+          <g id="symMoon" filter="url(#glow)">
+            <circle r="16" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/>
+            <circle cx="7" cy="-3" r="12" fill="#1a1a2e"/>
+          </g>
+        </defs>
 
-        <!-- 中心帽 -->
-        <circle cx="200" cy="200" r="10" fill="#1e293b" stroke="var(--ring)" stroke-width="2"/>
-        <circle cx="200" cy="200" r="4" fill="#94a3b8"/>
+        <!-- 夜晚底色 + 按日出日落角度的白天扇形 -->
+        <circle id="faceNight" cx="200" cy="200" r="188" fill="var(--night)"/>
+        <path id="faceDay" fill="var(--day)"/>
+
+        <!-- 日出 / 日落径向分界线 -->
+        <line id="lineSunrise" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+        <line id="lineSunset" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+
+        <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
+
+        <g id="ticks"></g>
+        <g id="eventLabels"></g>
+
+        <!-- 太阳或月亮：沿刻度环移动，无指针 -->
+        <g id="marker"></g>
       </svg>
     </div>
 
     <div class="meta">
-      <div class="sun-line">☀ 日出 <strong id="sunriseText">--:--</strong> · 左侧交界</div>
-      <div class="moon-line">☽ 日落 <strong id="sunsetText">--:--</strong> · 右侧交界</div>
+      <div class="sun-line">☀ 日出 <strong id="sunriseText">--:--</strong></div>
+      <div class="moon-line">☽ 日落 <strong id="sunsetText">--:--</strong></div>
       <div id="locText">定位中…</div>
     </div>
     <button type="button" class="loc-btn" id="locBtn">使用当前位置计算日出日落</button>
@@ -171,7 +149,7 @@
   <script>
 (function () {
   const CX = 200, CY = 200, R = 188;
-  const TICK_OUTER = 172, TICK_MAJOR = 158, TICK_MINOR = 164;
+  const TICK_OUTER = 172, TICK_INNER = 162, LABEL_R = 148, MARKER_R = 156;
 
   const timeText = document.getElementById("timeText");
   const dateText = document.getElementById("dateText");
@@ -180,33 +158,28 @@
   const locText = document.getElementById("locText");
   const locBtn = document.getElementById("locBtn");
   const ticksG = document.getElementById("ticks");
-  const pointerG = document.getElementById("pointer");
-  const pointerLine = document.getElementById("pointerLine");
-  const pointerIcon = document.getElementById("pointerIcon");
-  const iconSun = document.getElementById("iconSun");
-  const iconMoon = document.getElementById("iconMoon");
-  const labelLeft = document.getElementById("labelLeft");
-  const labelRight = document.getElementById("labelRight");
+  const eventLabelsG = document.getElementById("eventLabels");
+  const markerG = document.getElementById("marker");
+  const faceDay = document.getElementById("faceDay");
+  const lineSunrise = document.getElementById("lineSunrise");
+  const lineSunset = document.getElementById("lineSunset");
 
+  const NS = "http://www.w3.org/2000/svg";
   let lat = 39.9042;
   let lng = 116.4074;
   let locLabel = "北京（默认）";
-
   const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
 
   function pad(n) { return String(n).padStart(2, "0"); }
 
-  /** 24 小时制：0 点在正下方，顺时针；角度 0°=右侧，90°=上方 */
-  function hourToAngle(h) {
-    return (270 - (h / 24) * 360 + 360) % 360;
+  /** 24 小时制：0 点在正下方，顺时针；0°=右侧，90°=上方 */
+  function minutesToAngle(min) {
+    return (270 - (min / 1440) * 360 + 360) % 360;
   }
 
   function angleToXY(deg, radius) {
     const rad = (deg - 90) * Math.PI / 180;
-    return {
-      x: CX + radius * Math.cos(rad),
-      y: CY + radius * Math.sin(rad),
-    };
+    return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) };
   }
 
   function minutesOfDay(d) {
@@ -222,76 +195,97 @@
     return { sunrise: t.sunrise, sunset: t.sunset };
   }
 
+  /** 扇形路径：从 startDeg 顺时针扫到 endDeg（度数，0=右） */
+  function sectorPath(startDeg, endDeg) {
+    const s = angleToXY(startDeg, R);
+    const e = angleToXY(endDeg, R);
+    let sweep = (endDeg - startDeg + 360) % 360;
+    if (sweep < 0.001) return "";
+    const large = sweep > 180 ? 1 : 0;
+    return "M" + CX + "," + CY +
+      " L" + s.x + "," + s.y +
+      " A" + R + "," + R + " 0 " + large + ",0 " + e.x + "," + e.y +
+      " Z";
+  }
+
+  function setRadialLine(lineEl, deg) {
+    const outer = angleToXY(deg, R);
+    lineEl.setAttribute("x1", CX);
+    lineEl.setAttribute("y1", CY);
+    lineEl.setAttribute("x2", outer.x);
+    lineEl.setAttribute("y2", outer.y);
+  }
+
   function buildTicks() {
     ticksG.innerHTML = "";
     for (let h = 0; h < 24; h++) {
-      const deg = hourToAngle(h);
-      const isMajor = h % 6 === 0;
-      const inner = isMajor ? TICK_MAJOR : TICK_MINOR;
+      const deg = minutesToAngle(h * 60);
       const p1 = angleToXY(deg, TICK_OUTER);
-      const p2 = angleToXY(deg, inner);
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      const p2 = angleToXY(deg, TICK_INNER);
+      const major = h % 6 === 0;
+      const line = document.createElementNS(NS, "line");
       line.setAttribute("x1", p1.x);
       line.setAttribute("y1", p1.y);
       line.setAttribute("x2", p2.x);
       line.setAttribute("y2", p2.y);
-      line.setAttribute("stroke", isMajor ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)");
-      line.setAttribute("stroke-width", isMajor ? "2.5" : "1.2");
+      line.setAttribute("stroke", major ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)");
+      line.setAttribute("stroke-width", major ? "2.5" : "1.2");
       line.setAttribute("stroke-linecap", "round");
       ticksG.appendChild(line);
 
-      if (h % 3 === 0 && h !== 0 && h !== 12) {
-        const lbl = angleToXY(deg, 142);
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", lbl.x);
-        text.setAttribute("y", lbl.y + 4);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("fill", "rgba(255,255,255,0.55)");
-        text.setAttribute("font-size", "10");
-        text.textContent = String(h);
-        ticksG.appendChild(text);
-      }
+      const lbl = angleToXY(deg, LABEL_R);
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("x", lbl.x);
+      text.setAttribute("y", lbl.y + 4);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", major ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.65)");
+      text.setAttribute("font-size", major ? "11" : "9");
+      text.setAttribute("font-weight", major ? "600" : "400");
+      text.textContent = String(h);
+      ticksG.appendChild(text);
     }
   }
 
-  /**
-   * 白天：太阳指针从左侧交界顺时针经上方到右侧（日出→日落）
-   * 夜晚：月亮指针从右侧交界顺时针经下方到左侧（日落→次日日出）
-   */
-  function pointerForNow(now, sunrise, sunset) {
+  function placeEventLabel(text, time, color) {
+    const deg = minutesToAngle(minutesOfDay(time));
+    const p = angleToXY(deg, LABEL_R - 22);
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", p.x);
+    t.setAttribute("y", p.y + 3);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("fill", color);
+    t.setAttribute("font-size", "10");
+    t.setAttribute("font-weight", "600");
+    t.textContent = text;
+    eventLabelsG.appendChild(t);
+  }
+
+  function isDaytime(now, sunrise, sunset) {
     const m = minutesOfDay(now);
     const riseM = minutesOfDay(sunrise);
     const setM = minutesOfDay(sunset);
-
-    if (m >= riseM && m < setM) {
-      const p = (m - riseM) / (setM - riseM);
-      return { kind: "sun", angle: 180 - p * 180 };
-    }
-
-    const nightLen = (24 * 60 - setM) + riseM;
-    let elapsed;
-    if (m >= setM) {
-      elapsed = m - setM;
-    } else {
-      elapsed = (24 * 60 - setM) + m;
-    }
-    const p = Math.min(Math.max(elapsed / nightLen, 0), 1);
-    let angle;
-    if (p <= 0.5) {
-      angle = 270 * (p * 2);
-    } else {
-      angle = 270 - (p - 0.5) * 2 * 90;
-    }
-    return { kind: "moon", angle };
+    return m >= riseM && m < setM;
   }
 
-  function setPointer(angleDeg, kind) {
-    const tip = angleToXY(angleDeg, R - 22);
-    pointerLine.setAttribute("x2", tip.x);
-    pointerLine.setAttribute("y2", tip.y);
-    pointerIcon.setAttribute("transform", "translate(" + tip.x + "," + tip.y + ")");
-    iconSun.style.display = kind === "sun" ? "" : "none";
-    iconMoon.style.display = kind === "moon" ? "" : "none";
+  function updateFace(sunrise, sunset) {
+    const riseDeg = minutesToAngle(minutesOfDay(sunrise));
+    const setDeg = minutesToAngle(minutesOfDay(sunset));
+    faceDay.setAttribute("d", sectorPath(riseDeg, setDeg));
+    setRadialLine(lineSunrise, riseDeg);
+    setRadialLine(lineSunset, setDeg);
+  }
+
+  function setMarker(now, sunrise, sunset) {
+    const deg = minutesToAngle(minutesOfDay(now));
+    const pos = angleToXY(deg, MARKER_R);
+    const day = isDaytime(now, sunrise, sunset);
+    markerG.innerHTML = "";
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("transform", "translate(" + pos.x + "," + pos.y + ")");
+    const use = document.createElementNS(NS, "use");
+    use.setAttribute("href", day ? "#symSun" : "#symMoon");
+    g.appendChild(use);
+    markerG.appendChild(g);
   }
 
   function tick() {
@@ -305,11 +299,13 @@
 
     sunriseText.textContent = formatHM(sunrise);
     sunsetText.textContent = formatHM(sunset);
-    labelLeft.textContent = formatHM(sunrise);
-    labelRight.textContent = formatHM(sunset);
 
-    const ptr = pointerForNow(now, sunrise, sunset);
-    setPointer(ptr.angle, ptr.kind);
+    updateFace(sunrise, sunset);
+    eventLabelsG.innerHTML = "";
+    placeEventLabel("日出", sunrise, "#fef3c7");
+    placeEventLabel("日落", sunset, "#fde68a");
+
+    setMarker(now, sunrise, sunset);
     locText.textContent = locLabel;
   }
 
