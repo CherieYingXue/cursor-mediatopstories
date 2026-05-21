@@ -696,6 +696,22 @@ def derivative_gaokao_cards():
     return send_from_directory(BASE_DIR / "static", "derivative-gaokao-cards.html")
 
 
+@app.route("/wordcloud")
+def wordcloud_page():
+    """Chinese word cloud sized by trailing numeric weights."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "wordcloud.html")
+
+
+@app.route("/clock")
+def day_night_clock():
+    """Mobile-friendly 24h day/night circular clock with sun/moon pointer."""
+    from flask import send_from_directory
+
+    return send_from_directory(BASE_DIR / "static", "day-night-clock.html")
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()

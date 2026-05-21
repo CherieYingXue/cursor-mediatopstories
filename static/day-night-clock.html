@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>昼夜 24 小时表</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --day: #5eb8f0;
+      --night: #3d4450;
+      --ring: #e8eef4;
+      --text: #f0f4f8;
+      --muted: #94a3b8;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: calc(12px + var(--safe-top)) 12px calc(16px + var(--safe-bottom));
+    }
+    .digital {
+      text-align: center;
+      margin-bottom: 8px;
+      user-select: none;
+    }
+    .digital .time {
+      font-size: clamp(2rem, 9vw, 2.75rem);
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+    }
+    .digital .date {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .clock-wrap {
+      width: min(92vw, 92vh, 420px);
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .clock-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+    }
+    .meta {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 340px;
+      user-select: none;
+    }
+    .meta strong { color: #fcd34d; font-weight: 600; }
+    .meta .sun-line strong { color: #fbbf24; }
+    .meta .moon-line strong { color: #c4b5fd; }
+    .loc-btn {
+      margin-top: 10px;
+      border: 1px solid #475569;
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .loc-btn:active { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="digital">
+      <div class="time" id="timeText">--:--:--</div>
+      <div class="date" id="dateText"></div>
+    </div>
+
+    <div class="clock-wrap">
+      <svg viewBox="0 0 400 400" aria-label="24小时昼夜表盘">
+        <defs>
+          <clipPath id="clipUpper">
+            <rect x="0" y="0" width="400" height="200"/>
+          </clipPath>
+          <clipPath id="clipLower">
+            <rect x="0" y="200" width="400" height="200"/>
+          </clipPath>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- 表盘底色：上白天蓝、下夜深灰 -->
+        <circle cx="200" cy="200" r="188" fill="var(--night)"/>
+        <circle cx="200" cy="200" r="188" fill="var(--day)" clip-path="url(#clipUpper)"/>
+
+        <!-- 昼夜交界水平线 -->
+        <line x1="12" y1="200" x2="388" y2="200" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+
+        <!-- 外圈 -->
+        <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
+
+        <!-- 24 小时刻度（由 JS 绘制） -->
+        <g id="ticks"></g>
+
+        <!-- 方位标注 -->
+        <text x="200" y="36" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" opacity="0.95">12</text>
+        <text x="200" y="378" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">0</text>
+        <text id="labelLeft" x="28" y="205" text-anchor="middle" fill="#fef3c7" font-size="11" font-weight="600">日出</text>
+        <text id="labelRight" x="372" y="205" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="600">日落</text>
+
+        <!-- 太阳 / 月亮指针 -->
+        <g id="pointer" filter="url(#glow)">
+          <line id="pointerLine" x1="200" y1="200" x2="200" y2="52"
+                stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+          <g id="pointerIcon" transform="translate(200, 52)">
+            <!-- 默认太阳，JS 切换 -->
+            <g id="iconSun">
+              <circle r="18" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+              <g stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round">
+                <line y1="-26" y2="-32"/><line y1="26" y2="32"/>
+                <line x1="-26" x2="-32"/><line x1="26" x2="32"/>
+                <line x1="-18" y1="-18" x2="-23" y2="-23"/>
+                <line x1="18" y1="18" x2="23" y2="23"/>
+                <line x1="18" y1="-18" x2="23" y2="-23"/>
+                <line x1="-18" y1="18" x2="-23" y2="23"/>
+              </g>
+            </g>
+            <g id="iconMoon" display="none">
+              <circle r="18" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/>
+              <circle cx="8" cy="-4" r="14" fill="#1a1a2e"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- 中心帽 -->
+        <circle cx="200" cy="200" r="10" fill="#1e293b" stroke="var(--ring)" stroke-width="2"/>
+        <circle cx="200" cy="200" r="4" fill="#94a3b8"/>
+      </svg>
+    </div>
+
+    <div class="meta">
+      <div class="sun-line">☀ 日出 <strong id="sunriseText">--:--</strong> · 左侧交界</div>
+      <div class="moon-line">☽ 日落 <strong id="sunsetText">--:--</strong> · 右侧交界</div>
+      <div id="locText">定位中…</div>
+    </div>
+    <button type="button" class="loc-btn" id="locBtn">使用当前位置计算日出日落</button>
+  </div>
+
+  <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+  <script>
+(function () {
+  const CX = 200, CY = 200, R = 188;
+  const TICK_OUTER = 172, TICK_MAJOR = 158, TICK_MINOR = 164;
+
+  const timeText = document.getElementById("timeText");
+  const dateText = document.getElementById("dateText");
+  const sunriseText = document.getElementById("sunriseText");
+  const sunsetText = document.getElementById("sunsetText");
+  const locText = document.getElementById("locText");
+  const locBtn = document.getElementById("locBtn");
+  const ticksG = document.getElementById("ticks");
+  const pointerG = document.getElementById("pointer");
+  const pointerLine = document.getElementById("pointerLine");
+  const pointerIcon = document.getElementById("pointerIcon");
+  const iconSun = document.getElementById("iconSun");
+  const iconMoon = document.getElementById("iconMoon");
+  const labelLeft = document.getElementById("labelLeft");
+  const labelRight = document.getElementById("labelRight");
+
+  let lat = 39.9042;
+  let lng = 116.4074;
+  let locLabel = "北京（默认）";
+
+  const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  /** 24 小时制：0 点在正下方，顺时针；角度 0°=右侧，90°=上方 */
+  function hourToAngle(h) {
+    return (270 - (h / 24) * 360 + 360) % 360;
+  }
+
+  function angleToXY(deg, radius) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return {
+      x: CX + radius * Math.cos(rad),
+      y: CY + radius * Math.sin(rad),
+    };
+  }
+
+  function minutesOfDay(d) {
+    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60 + d.getMilliseconds() / 60000;
+  }
+
+  function formatHM(d) {
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function getSunTimes(date) {
+    const t = SunCalc.getTimes(date, lat, lng);
+    return { sunrise: t.sunrise, sunset: t.sunset };
+  }
+
+  function buildTicks() {
+    ticksG.innerHTML = "";
+    for (let h = 0; h < 24; h++) {
+      const deg = hourToAngle(h);
+      const isMajor = h % 6 === 0;
+      const inner = isMajor ? TICK_MAJOR : TICK_MINOR;
+      const p1 = angleToXY(deg, TICK_OUTER);
+      const p2 = angleToXY(deg, inner);
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", isMajor ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)");
+      line.setAttribute("stroke-width", isMajor ? "2.5" : "1.2");
+      line.setAttribute("stroke-linecap", "round");
+      ticksG.appendChild(line);
+
+      if (h % 3 === 0 && h !== 0 && h !== 12) {
+        const lbl = angleToXY(deg, 142);
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", lbl.x);
+        text.setAttribute("y", lbl.y + 4);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "rgba(255,255,255,0.55)");
+        text.setAttribute("font-size", "10");
+        text.textContent = String(h);
+        ticksG.appendChild(text);
+      }
+    }
+  }
+
+  /**
+   * 白天：太阳指针从左侧交界顺时针经上方到右侧（日出→日落）
+   * 夜晚：月亮指针从右侧交界顺时针经下方到左侧（日落→次日日出）
+   */
+  function pointerForNow(now, sunrise, sunset) {
+    const m = minutesOfDay(now);
+    const riseM = minutesOfDay(sunrise);
+    const setM = minutesOfDay(sunset);
+
+    if (m >= riseM && m < setM) {
+      const p = (m - riseM) / (setM - riseM);
+      return { kind: "sun", angle: 180 - p * 180 };
+    }
+
+    const nightLen = (24 * 60 - setM) + riseM;
+    let elapsed;
+    if (m >= setM) {
+      elapsed = m - setM;
+    } else {
+      elapsed = (24 * 60 - setM) + m;
+    }
+    const p = Math.min(Math.max(elapsed / nightLen, 0), 1);
+    let angle;
+    if (p <= 0.5) {
+      angle = 270 * (p * 2);
+    } else {
+      angle = 270 - (p - 0.5) * 2 * 90;
+    }
+    return { kind: "moon", angle };
+  }
+
+  function setPointer(angleDeg, kind) {
+    const tip = angleToXY(angleDeg, R - 22);
+    pointerLine.setAttribute("x2", tip.x);
+    pointerLine.setAttribute("y2", tip.y);
+    pointerIcon.setAttribute("transform", "translate(" + tip.x + "," + tip.y + ")");
+    iconSun.style.display = kind === "sun" ? "" : "none";
+    iconMoon.style.display = kind === "moon" ? "" : "none";
+  }
+
+  function tick() {
+    const now = new Date();
+    const { sunrise, sunset } = getSunTimes(now);
+
+    timeText.textContent =
+      pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+    dateText.textContent =
+      now.getFullYear() + "年" + (now.getMonth() + 1) + "月" + now.getDate() + "日 星期" + WEEK[now.getDay()];
+
+    sunriseText.textContent = formatHM(sunrise);
+    sunsetText.textContent = formatHM(sunset);
+    labelLeft.textContent = formatHM(sunrise);
+    labelRight.textContent = formatHM(sunset);
+
+    const ptr = pointerForNow(now, sunrise, sunset);
+    setPointer(ptr.angle, ptr.kind);
+    locText.textContent = locLabel;
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      locText.textContent = locLabel + "（设备不支持定位，使用默认坐标）";
+      return;
+    }
+    locBtn.disabled = true;
+    locBtn.textContent = "定位中…";
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        locLabel = "纬度 " + lat.toFixed(2) + "° · 经度 " + lng.toFixed(2) + "°";
+        locBtn.disabled = false;
+        locBtn.textContent = "使用当前位置计算日出日落";
+        tick();
+      },
+      function () {
+        locBtn.disabled = false;
+        locBtn.textContent = "使用当前位置计算日出日落";
+        locText.textContent = locLabel + "（定位失败，仍用默认坐标）";
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+    );
+  }
+
+  buildTicks();
+  locBtn.addEventListener("click", requestLocation);
+  requestLocation();
+  tick();
+  setInterval(tick, 200);
+})();
+  </script>
+</body>
+</html>
