@@ -122,12 +122,11 @@
           </g>
         </defs>
 
-        <!-- 昼夜：交界线（日出—日落）上方浅蓝=白天，下方深灰=黑夜 -->
+        <!-- 昼夜：圆内深灰为底；日出—日落天际线上方填浅蓝 -->
         <g clip-path="url(#dialClip)">
           <circle cx="200" cy="200" r="188" fill="var(--night)"/>
           <path id="faceDay" fill="var(--day)"/>
-          <path id="faceNight" fill="var(--night)"/>
-          <path id="horizonRidge" fill="none" stroke="rgba(30,41,59,0.55)" stroke-width="2"
+          <path id="horizonRidge" fill="none" stroke="rgba(45,55,72,0.7)" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round"/>
         </g>
 
@@ -165,7 +164,6 @@
   const eventLabelsG = document.getElementById("eventLabels");
   const markerG = document.getElementById("marker");
   const faceDay = document.getElementById("faceDay");
-  const faceNight = document.getElementById("faceNight");
   const horizonRidge = document.getElementById("horizonRidge");
 
   const NS = "http://www.w3.org/2000/svg";
@@ -206,64 +204,69 @@
     return { sunrise: t.sunrise, sunset: t.sunset };
   }
 
+  function waveOffset(t) {
+    return (
+      6 * Math.sin(t * Math.PI * 3.2) +
+      3.5 * Math.sin(t * Math.PI * 7.4 + 0.7) +
+      2 * Math.sin(t * Math.PI * 12.5 + 1.4)
+    );
+  }
+
+  function polyPath(points, close) {
+    if (!points.length) return "";
+    let d = "M " + points[0].x.toFixed(2) + " " + points[0].y.toFixed(2);
+    for (let i = 1; i < points.length; i++) {
+      d += " L " + points[i].x.toFixed(2) + " " + points[i].y.toFixed(2);
+    }
+    return close ? d + " Z" : d;
+  }
+
   /**
-   * 日出—日落连线为起伏天际线（端点在表盘对应时刻）。
-   * 屏幕坐标：交界线上方(y更小)=浅蓝白天；下方=深灰黑夜。
+   * 日出—日落为起伏天际线（端点对准表盘时刻）。
+   * 白天 = 天际线与表盘昼弧（经12点）之间的区域（屏幕上方）；
+   * 黑夜 = 其余圆内区域（底层深灰）。
    */
   function buildSkylinePaths(sunrise, sunset) {
     const riseDeg = minutesToAngle(minutesOfDay(sunrise));
     const setDeg = minutesToAngle(minutesOfDay(sunset));
     const daySweep = (setDeg - riseDeg + 360) % 360;
-    const nightSweep = (360 - daySweep) % 360;
+    const nightSweep = 360 - daySweep;
+    const steps = 80;
 
-    const S = angleToXY(riseDeg, R);
-    const E = angleToXY(setDeg, R);
-    const steps = 72;
-    const ridgePts = [];
+    const topRim = [];
+    const ridge = [];
+    const bottomRim = [];
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      const deg = (riseDeg + daySweep * t) % 360;
-      const wave =
-        6 * Math.sin(t * Math.PI * 3.2) +
-        3.5 * Math.sin(t * Math.PI * 7.4 + 0.7) +
-        2 * Math.sin(t * Math.PI * 12.5 + 1.4);
-      ridgePts.push(angleToXY(deg, Math.max(R - wave, R * 0.58)));
-    }
-    ridgePts[0] = S;
-    ridgePts[steps] = E;
+      const dayDeg = (riseDeg + daySweep * t) % 360;
+      const nightDeg = (riseDeg - nightSweep * t + 360) % 360;
+      const wave = waveOffset(t);
 
-    let ridge = "M " + S.x.toFixed(2) + " " + S.y.toFixed(2);
-    for (let i = 1; i < ridgePts.length; i++) {
-      ridge += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
+      topRim.push(angleToXY(dayDeg, R));
+      bottomRim.push(angleToXY(nightDeg, R));
+      ridge.push(angleToXY(dayDeg, Math.max(R - wave, R * 0.55)));
     }
 
-    const topArcLarge = daySweep > 180 ? 1 : 0;
-    const bottomArcLarge = nightSweep > 180 ? 1 : 0;
+    const S = topRim[0];
+    const E = topRim[steps];
+    ridge[0] = S;
+    ridge[steps] = E;
 
-    // 白天：天际线 → 沿表盘昼弧(经12点)回到日出
-    const dayPath =
-      ridge +
-      " A " + R + " " + R + " 0 " + topArcLarge + ",0 " +
-      S.x.toFixed(2) + " " + S.y.toFixed(2) + " Z";
+    const dayPolygon = topRim.concat(ridge.slice(1, -1).reverse());
+    const ridgeLine = ridge.slice();
 
-    // 黑夜：日出 → 沿表盘夜弧(经0点)到日落 → 沿天际线返回
-    let nightPath = "M " + S.x.toFixed(2) + " " + S.y.toFixed(2);
-    nightPath +=
-      " A " + R + " " + R + " 0 " + bottomArcLarge + ",1 " +
-      E.x.toFixed(2) + " " + E.y.toFixed(2);
-    for (let i = ridgePts.length - 1; i >= 0; i--) {
-      nightPath += " L " + ridgePts[i].x.toFixed(2) + " " + ridgePts[i].y.toFixed(2);
-    }
-    nightPath += " Z";
-
-    return { dayPath, nightPath, ridge, S, E };
+    return {
+      dayPath: polyPath(dayPolygon, true),
+      ridge: polyPath(ridgeLine, false),
+      S,
+      E,
+    };
   }
 
   function buildSkyFace(sunrise, sunset) {
     const p = buildSkylinePaths(sunrise, sunset);
     faceDay.setAttribute("d", p.dayPath);
-    faceNight.setAttribute("d", p.nightPath);
     horizonRidge.setAttribute("d", p.ridge);
     return p;
   }
