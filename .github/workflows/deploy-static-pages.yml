@@ -23,9 +23,13 @@ jobs:
           cp static/zoology-cards.html public/index.html
           cp static/zoology_cards_data.json public/zoology_cards_data.json
           cp static/derivative-gaokao-cards.html public/derivative-gaokao/index.html
-          cp static/wordcloud.html public/wordcloud/index.html
-          cp static/word_freq.json public/wordcloud/word_freq.json
           cp static/day-night-clock.html public/clock/index.html
+          if [ -f static/wordcloud.html ]; then
+            cp static/wordcloud.html public/wordcloud/index.html
+          fi
+          if [ -f static/word_freq.json ]; then
+            cp static/word_freq.json public/wordcloud/word_freq.json
+          fi
           touch public/.nojekyll
 
       - name: Deploy to gh-pages branch
