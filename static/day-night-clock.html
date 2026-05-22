@@ -133,10 +133,15 @@
 
         <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
 
+        <g id="yearTicks"></g>
         <g id="ticks"></g>
+        <g id="weekWheel"></g>
+        <g id="calendarHands">
+          <line id="handDate" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>
+          <line id="handWeek" stroke="#0f172a" stroke-width="3.2" stroke-linecap="round"/>
+          <circle cx="200" cy="200" r="5" fill="#0f172a"/>
+        </g>
         <g id="eventLabels"></g>
-
-        <!-- 太阳或月亮：沿刻度环移动，无指针 -->
         <g id="marker"></g>
       </svg>
     </div>
@@ -154,6 +159,10 @@
 (function () {
   const CX = 200, CY = 200, R = 188;
   const TICK_OUTER = 172, TICK_INNER = 162, LABEL_R = 148, MARKER_R = 156;
+  const YEAR_TICK_OUT = 186, YEAR_TICK_IN = 183;
+  const YEAR_HAND_R = 176;
+  const WEEK_R = 56, WEEK_HAND_R = 34;
+  const WEEK_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
 
   const timeText = document.getElementById("timeText");
   const dateText = document.getElementById("dateText");
@@ -162,6 +171,10 @@
   const locText = document.getElementById("locText");
   const locBtn = document.getElementById("locBtn");
   const ticksG = document.getElementById("ticks");
+  const yearTicksG = document.getElementById("yearTicks");
+  const weekWheelG = document.getElementById("weekWheel");
+  const handDate = document.getElementById("handDate");
+  const handWeek = document.getElementById("handWeek");
   const eventLabelsG = document.getElementById("eventLabels");
   const markerG = document.getElementById("marker");
   const faceDay = document.getElementById("faceDay");
@@ -183,6 +196,47 @@
    */
   function minutesToAngle(min) {
     return (min / 1440) * 360;
+  }
+
+  function daysInYear(y) {
+    return (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 366 : 365;
+  }
+
+  function dayOfYear(date) {
+    const start = new Date(date.getFullYear(), 0, 0);
+    return Math.floor((date - start) / 86400000);
+  }
+
+  /** 1月1日在正上方，顺时针递增 */
+  function dayOfYearToAngle(doy, total) {
+    return (180 + ((doy - 1) / total) * 360) % 360;
+  }
+
+  function isoWeekday(date) {
+    const d = date.getDay();
+    return d === 0 ? 7 : d;
+  }
+
+  function weekSectorPath(index) {
+    const a0 = (index / 7) * 360;
+    const a1 = ((index + 1) / 7) * 360;
+    const p0 = angleToXY(a0, WEEK_R);
+    const p1 = angleToXY(a1, WEEK_R);
+    const large = 0;
+    return (
+      "M " + CX + " " + CY +
+      " L " + p0.x.toFixed(2) + " " + p0.y.toFixed(2) +
+      " A " + WEEK_R + " " + WEEK_R + " 0 " + large + ",1 " +
+      p1.x.toFixed(2) + " " + p1.y.toFixed(2) + " Z"
+    );
+  }
+
+  function setRadialHand(lineEl, deg, len) {
+    const tip = angleToXY(deg, len);
+    lineEl.setAttribute("x1", CX);
+    lineEl.setAttribute("y1", CY);
+    lineEl.setAttribute("x2", tip.x.toFixed(2));
+    lineEl.setAttribute("y2", tip.y.toFixed(2));
   }
 
   function angleToXY(deg, radius) {
@@ -286,6 +340,68 @@
     return p;
   }
 
+  function buildYearTicks() {
+    yearTicksG.innerHTML = "";
+    const monthStarts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+    for (let d = 1; d <= 365; d++) {
+      const deg = dayOfYearToAngle(d, 365);
+      const isMonth = monthStarts.indexOf(d) >= 0;
+      const p1 = angleToXY(deg, YEAR_TICK_OUT);
+      const p2 = angleToXY(deg, isMonth ? YEAR_TICK_IN - 1 : YEAR_TICK_IN);
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", isMonth ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.14)");
+      line.setAttribute("stroke-width", isMonth ? "1.2" : "0.7");
+      line.setAttribute("stroke-linecap", "round");
+      yearTicksG.appendChild(line);
+    }
+  }
+
+  function buildWeekWheel() {
+    weekWheelG.innerHTML = "";
+    const colors = ["#f2c9a6", "#f2c9a6", "#f2c9a6", "#f2c9a6", "#cfe8a8", "#cfe8a8", "#cfe8a8"];
+    for (let i = 0; i < 7; i++) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", weekSectorPath(i));
+      path.setAttribute("fill", colors[i]);
+      path.setAttribute("stroke", "rgba(30,41,59,0.45)");
+      path.setAttribute("stroke-width", "1");
+      weekWheelG.appendChild(path);
+
+      const mid = angleToXY(((i + 0.5) / 7) * 360, WEEK_R * 0.58);
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("x", mid.x);
+      text.setAttribute("y", mid.y + 4);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", "#334155");
+      text.setAttribute("font-size", "11");
+      text.setAttribute("font-weight", "700");
+      text.textContent = WEEK_NAMES[i];
+      weekWheelG.appendChild(text);
+    }
+    const ring = document.createElementNS(NS, "circle");
+    ring.setAttribute("cx", CX);
+    ring.setAttribute("cy", CY);
+    ring.setAttribute("r", WEEK_R);
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "rgba(30,41,59,0.5)");
+    ring.setAttribute("stroke-width", "1.5");
+    weekWheelG.appendChild(ring);
+  }
+
+  function updateCalendarHands(now) {
+    const y = now.getFullYear();
+    const total = daysInYear(y);
+    const doy = dayOfYear(now);
+    const dateDeg = dayOfYearToAngle(doy, total);
+    const weekDeg = ((isoWeekday(now) - 1) + 0.5) / 7 * 360;
+    setRadialHand(handDate, dateDeg, YEAR_HAND_R);
+    setRadialHand(handWeek, weekDeg, WEEK_HAND_R);
+  }
+
   function buildTicks() {
     ticksG.innerHTML = "";
     for (let h = 0; h < 24; h++) {
@@ -381,6 +497,7 @@
     placeHorizonLabel("日落", sky.E.x, sky.E.y + 14, "#fde68a");
 
     setMarker(now, sunrise, sunset);
+    updateCalendarHands(now);
     locText.textContent = locLabel;
   }
 
@@ -409,6 +526,8 @@
     );
   }
 
+  buildYearTicks();
+  buildWeekWheel();
   buildTicks();
   locBtn.addEventListener("click", requestLocation);
   requestLocation();
