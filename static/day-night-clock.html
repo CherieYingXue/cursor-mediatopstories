@@ -133,6 +133,7 @@
 
         <circle cx="200" cy="200" r="188" fill="none" stroke="var(--ring)" stroke-width="3" opacity="0.9"/>
 
+        <g id="solarTerms"></g>
         <g id="yearTicks"></g>
         <g id="ticks"></g>
         <g id="weekWheel"></g>
@@ -159,10 +160,27 @@
 (function () {
   const CX = 200, CY = 200, R = 188;
   const TICK_OUTER = 172, TICK_INNER = 162, LABEL_R = 148, MARKER_R = 156;
-  const YEAR_TICK_OUT = 186, YEAR_TICK_IN = 183;
-  const YEAR_HAND_R = 176;
-  const WEEK_R = 56, WEEK_HAND_R = 34;
+  const TERM_IN = 60, TERM_OUT = 118, TERM_LABEL_R = 102;
+  const YEAR_TICK_OUT = 120, YEAR_TICK_IN = 117;
+  const YEAR_HAND_R = 119;
+  const WEEK_R = 50, WEEK_HAND_R = 32;
+  const WEEK_TOP = 180;
   const WEEK_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
+  const SOLAR_TERM_NAMES = [
+    "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨",
+    "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑",
+    "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至",
+  ];
+  const SOLAR_TERM_DAYS = [
+    6, 20, 34, 49, 64, 79, 94, 109, 124, 139, 154, 169,
+    184, 199, 214, 229, 244, 259, 274, 289, 304, 319, 334, 349,
+  ];
+  const TERM_COLORS = [
+    "#6a9eb8", "#6a9eb8", "#7ec8a0", "#7ec8a0", "#8ed4aa", "#8ed4aa",
+    "#9edca8", "#9edca8", "#e89090", "#e89090", "#f0a0a0", "#f0a0a0",
+    "#e88888", "#e88888", "#d4a86a", "#d4a86a", "#c9a060", "#c9a060",
+    "#b89858", "#b89858", "#8aa8be", "#8aa8be", "#7a9eb8", "#7a9eb8",
+  ];
 
   const timeText = document.getElementById("timeText");
   const dateText = document.getElementById("dateText");
@@ -171,6 +189,7 @@
   const locText = document.getElementById("locText");
   const locBtn = document.getElementById("locBtn");
   const ticksG = document.getElementById("ticks");
+  const solarTermsG = document.getElementById("solarTerms");
   const yearTicksG = document.getElementById("yearTicks");
   const weekWheelG = document.getElementById("weekWheel");
   const handDate = document.getElementById("handDate");
@@ -218,17 +237,46 @@
   }
 
   function weekSectorPath(index) {
-    const a0 = (index / 7) * 360;
-    const a1 = ((index + 1) / 7) * 360;
+    const a0 = WEEK_TOP + (index / 7) * 360;
+    const a1 = WEEK_TOP + ((index + 1) / 7) * 360;
     const p0 = angleToXY(a0, WEEK_R);
     const p1 = angleToXY(a1, WEEK_R);
-    const large = 0;
     return (
       "M " + CX + " " + CY +
       " L " + p0.x.toFixed(2) + " " + p0.y.toFixed(2) +
-      " A " + WEEK_R + " " + WEEK_R + " 0 " + large + ",1 " +
+      " A " + WEEK_R + " " + WEEK_R + " 0 0,1 " +
       p1.x.toFixed(2) + " " + p1.y.toFixed(2) + " Z"
     );
+  }
+
+  function weekMidAngle(index) {
+    return (WEEK_TOP + ((index + 0.5) / 7) * 360) % 360;
+  }
+
+  function termSectorPath(a0, a1) {
+    const p0in = angleToXY(a0, TERM_IN);
+    const p1in = angleToXY(a1, TERM_IN);
+    const p1out = angleToXY(a1, TERM_OUT);
+    const p0out = angleToXY(a0, TERM_OUT);
+    const sweep = (a1 - a0 + 360) % 360;
+    const large = sweep > 180 ? 1 : 0;
+    return (
+      "M " + p0in.x.toFixed(2) + " " + p0in.y.toFixed(2) +
+      " L " + p1in.x.toFixed(2) + " " + p1in.y.toFixed(2) +
+      " A " + TERM_IN + " " + TERM_IN + " 0 " + large + ",1 " +
+      p1out.x.toFixed(2) + " " + p1out.y.toFixed(2) +
+      " L " + p0out.x.toFixed(2) + " " + p0out.y.toFixed(2) +
+      " A " + TERM_OUT + " " + TERM_OUT + " 0 " + large + ",0 " +
+      p0in.x.toFixed(2) + " " + p0in.y.toFixed(2) + " Z"
+    );
+  }
+
+  function termSectorBounds(index) {
+    const half = 365 / 48;
+    const center = SOLAR_TERM_DAYS[index];
+    const a0 = dayOfYearToAngle(center - half, 365);
+    const a1 = dayOfYearToAngle(center + half, 365);
+    return { a0, a1 };
   }
 
   function setRadialHand(lineEl, deg, len) {
@@ -360,24 +408,68 @@
     }
   }
 
+  function buildSolarTermRing() {
+    solarTermsG.innerHTML = "";
+    for (let i = 0; i < 24; i++) {
+      const b = termSectorBounds(i);
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", termSectorPath(b.a0, b.a1));
+      path.setAttribute("fill", TERM_COLORS[i]);
+      path.setAttribute("stroke", "rgba(40,70,50,0.35)");
+      path.setAttribute("stroke-width", "0.6");
+      solarTermsG.appendChild(path);
+
+      const mid = dayOfYearToAngle(SOLAR_TERM_DAYS[i], 365);
+      const lp = angleToXY(mid, TERM_LABEL_R);
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("x", lp.x);
+      text.setAttribute("y", lp.y + 3);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", "rgba(255,255,255,0.92)");
+      text.setAttribute("font-size", "8");
+      text.setAttribute("font-weight", "600");
+      text.textContent = SOLAR_TERM_NAMES[i];
+      solarTermsG.appendChild(text);
+    }
+    const outer = document.createElementNS(NS, "circle");
+    outer.setAttribute("cx", CX);
+    outer.setAttribute("cy", CY);
+    outer.setAttribute("r", TERM_OUT);
+    outer.setAttribute("fill", "none");
+    outer.setAttribute("stroke", "rgba(120,150,110,0.55)");
+    outer.setAttribute("stroke-width", "1.5");
+    solarTermsG.appendChild(outer);
+    const inner = document.createElementNS(NS, "circle");
+    inner.setAttribute("cx", CX);
+    inner.setAttribute("cy", CY);
+    inner.setAttribute("r", TERM_IN);
+    inner.setAttribute("fill", "none");
+    inner.setAttribute("stroke", "rgba(120,150,110,0.4)");
+    inner.setAttribute("stroke-width", "1");
+    solarTermsG.appendChild(inner);
+  }
+
   function buildWeekWheel() {
     weekWheelG.innerHTML = "";
-    const colors = ["#f2c9a6", "#f2c9a6", "#f2c9a6", "#f2c9a6", "#cfe8a8", "#cfe8a8", "#cfe8a8"];
+    const colors = [
+      "#e8a04a", "#e8a04a", "#e8a04a", "#e8a04a", "#e8a04a",
+      "#7cbd5c", "#7cbd5c",
+    ];
     for (let i = 0; i < 7; i++) {
       const path = document.createElementNS(NS, "path");
       path.setAttribute("d", weekSectorPath(i));
       path.setAttribute("fill", colors[i]);
-      path.setAttribute("stroke", "rgba(30,41,59,0.45)");
+      path.setAttribute("stroke", "rgba(30,41,59,0.5)");
       path.setAttribute("stroke-width", "1");
       weekWheelG.appendChild(path);
 
-      const mid = angleToXY(((i + 0.5) / 7) * 360, WEEK_R * 0.58);
+      const mid = angleToXY(weekMidAngle(i), WEEK_R * 0.55);
       const text = document.createElementNS(NS, "text");
       text.setAttribute("x", mid.x);
       text.setAttribute("y", mid.y + 4);
       text.setAttribute("text-anchor", "middle");
-      text.setAttribute("fill", "#334155");
-      text.setAttribute("font-size", "11");
+      text.setAttribute("fill", "#3d2f1f");
+      text.setAttribute("font-size", "10");
       text.setAttribute("font-weight", "700");
       text.textContent = WEEK_NAMES[i];
       weekWheelG.appendChild(text);
@@ -387,7 +479,7 @@
     ring.setAttribute("cy", CY);
     ring.setAttribute("r", WEEK_R);
     ring.setAttribute("fill", "none");
-    ring.setAttribute("stroke", "rgba(30,41,59,0.5)");
+    ring.setAttribute("stroke", "rgba(30,41,59,0.55)");
     ring.setAttribute("stroke-width", "1.5");
     weekWheelG.appendChild(ring);
   }
@@ -397,7 +489,8 @@
     const total = daysInYear(y);
     const doy = dayOfYear(now);
     const dateDeg = dayOfYearToAngle(doy, total);
-    const weekDeg = ((isoWeekday(now) - 1) + 0.5) / 7 * 360;
+    const weekIdx = isoWeekday(now) - 1;
+    const weekDeg = weekMidAngle(weekIdx);
     setRadialHand(handDate, dateDeg, YEAR_HAND_R);
     setRadialHand(handWeek, weekDeg, WEEK_HAND_R);
   }
@@ -526,6 +619,7 @@
     );
   }
 
+  buildSolarTermRing();
   buildYearTicks();
   buildWeekWheel();
   buildTicks();
