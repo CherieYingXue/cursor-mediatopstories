@@ -280,12 +280,22 @@
     );
   }
 
+  /** 相邻节气之间的中点（跨年：冬至→小寒 等） */
+  function midpointDay(dayA, dayB) {
+    if (dayB >= dayA) return (dayA + dayB) / 2;
+    const span = 365 - dayA + dayB;
+    let mid = dayA + span / 2;
+    if (mid > 365) mid -= 365;
+    return mid;
+  }
+
   function termSectorBounds(index) {
-    const half = 365 / 48;
-    const center = SOLAR_TERM_DAYS[index];
-    const a0 = yearRingAngle(center - half, 365);
-    const a1 = yearRingAngle(center + half, 365);
-    return { a0, a1 };
+    const prev = SOLAR_TERM_DAYS[(index + 23) % 24];
+    const cur = SOLAR_TERM_DAYS[index];
+    const next = SOLAR_TERM_DAYS[(index + 1) % 24];
+    const d0 = midpointDay(prev, cur);
+    const d1 = midpointDay(cur, next);
+    return { a0: yearRingAngle(d0, 365), a1: yearRingAngle(d1, 365) };
   }
 
   function setRadialHand(lineEl, deg, len) {
