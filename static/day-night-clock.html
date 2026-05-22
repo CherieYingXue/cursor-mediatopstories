@@ -226,9 +226,18 @@
     return Math.floor((date - start) / 86400000);
   }
 
-  /** 1月1日在正上方，顺时针递增 */
-  function dayOfYearToAngle(doy, total) {
+  /** 公历日期角度（1月1日起算，未旋转） */
+  function rawYearAngle(doy, total) {
     return (180 + ((doy - 1) / total) * 360) % 360;
+  }
+
+  /** 大寒—立春交界在正上方（24 节气圈与 365 刻度共用） */
+  const TERM_TOP_DAY = (SOLAR_TERM_DAYS[1] + SOLAR_TERM_DAYS[2]) / 2;
+  const TERM_RING_OFFSET =
+    (180 - rawYearAngle(TERM_TOP_DAY, 365) + 360) % 360;
+
+  function yearRingAngle(doy, total) {
+    return (rawYearAngle(doy, total) + TERM_RING_OFFSET) % 360;
   }
 
   function isoWeekday(date) {
@@ -274,8 +283,8 @@
   function termSectorBounds(index) {
     const half = 365 / 48;
     const center = SOLAR_TERM_DAYS[index];
-    const a0 = dayOfYearToAngle(center - half, 365);
-    const a1 = dayOfYearToAngle(center + half, 365);
+    const a0 = yearRingAngle(center - half, 365);
+    const a1 = yearRingAngle(center + half, 365);
     return { a0, a1 };
   }
 
@@ -392,7 +401,7 @@
     yearTicksG.innerHTML = "";
     const monthStarts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
     for (let d = 1; d <= 365; d++) {
-      const deg = dayOfYearToAngle(d, 365);
+      const deg = yearRingAngle(d, 365);
       const isMonth = monthStarts.indexOf(d) >= 0;
       const p1 = angleToXY(deg, YEAR_TICK_OUT);
       const p2 = angleToXY(deg, isMonth ? YEAR_TICK_IN - 1 : YEAR_TICK_IN);
@@ -419,7 +428,7 @@
       path.setAttribute("stroke-width", "0.6");
       solarTermsG.appendChild(path);
 
-      const mid = dayOfYearToAngle(SOLAR_TERM_DAYS[i], 365);
+      const mid = yearRingAngle(SOLAR_TERM_DAYS[i], 365);
       const lp = angleToXY(mid, TERM_LABEL_R);
       const text = document.createElementNS(NS, "text");
       text.setAttribute("x", lp.x);
@@ -488,7 +497,7 @@
     const y = now.getFullYear();
     const total = daysInYear(y);
     const doy = dayOfYear(now);
-    const dateDeg = dayOfYearToAngle(doy, total);
+    const dateDeg = yearRingAngle(doy, total);
     const weekIdx = isoWeekday(now) - 1;
     const weekDeg = weekMidAngle(weekIdx);
     setRadialHand(handDate, dateDeg, YEAR_HAND_R);
