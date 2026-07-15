@@ -712,6 +712,16 @@ def day_night_clock():
     return send_from_directory(BASE_DIR / "static", "day-night-clock.html")
 
 
+@app.route("/russia")
+def russia_top_stories():
+    """Widely-covered top stories from major Russian media outlets."""
+    from flask import send_from_directory
+
+    return send_from_directory(
+        BASE_DIR / "static", "russia-top-stories-2026-07-15.html"
+    )
+
+
 @app.route("/", methods=["GET"])
 def home():
     rows = latest_rows()
