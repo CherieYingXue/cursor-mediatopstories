@@ -1,6 +1,7 @@
 services:
   - type: web
-    name: daily-top-stories-checker
+    name: russia-media-reports
+    branch: cursor/russian-media-top-stories-d482
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -8,6 +9,8 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: LANDING_PATH
+        value: "/russia"
       - key: DAILY_RUN_HOUR
         value: "8"
       - key: DAILY_RUN_MINUTE

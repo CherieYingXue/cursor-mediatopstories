@@ -903,6 +903,9 @@ def api_russia_news():
 
 @app.route("/", methods=["GET"])
 def home():
+    landing = os.getenv("LANDING_PATH", "").strip()
+    if landing and landing not in {"", "/"}:
+        return redirect(landing)
     rows = latest_rows()
     conn = get_conn()
     last_run = conn.execute("SELECT run_at FROM runs ORDER BY id DESC LIMIT 1").fetchone()
