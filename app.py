@@ -714,11 +714,11 @@ def day_night_clock():
 
 @app.route("/russia")
 def russia_top_stories():
-    """Widely-covered top stories from major Russian media outlets."""
+    """俄罗斯主流媒体重点新闻聚合页（俄语标题 + 中文翻译）。"""
     from flask import send_from_directory
 
     return send_from_directory(
-        BASE_DIR / "static", "russia-top-stories-2026-07-15.html"
+        BASE_DIR / "static", "russia-top-stories-cn.html"
     )
 
 
