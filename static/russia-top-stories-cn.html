@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>俄罗斯主流媒体重点新闻 · 2026年7月21日</title>
+<title>俄罗斯主流媒体重点新闻（自动更新）</title>
 <style>
   :root {
     --bg: #0f1420;
@@ -13,6 +13,9 @@
     --muted: #9aa4b2;
     --accent: #ffcc33;
     --accent-2: #4ea1ff;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --err: #f87171;
     --border: #2a3346;
   }
   * { box-sizing: border-box; }
@@ -20,16 +23,46 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
       Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     line-height: 1.55; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 18px 80px; }
-  header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
-  h1 { font-size: 1.55rem; margin: 0 0 8px; letter-spacing: 0.3px; }
-  header .sub { color: var(--muted); font-size: 0.95rem; }
-  header .meta { margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 18px 100px; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; letter-spacing: 0.3px; }
+  header .sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 8px; }
   header .flag { display: inline-block; font-size: 1.4rem; margin-right: 6px; vertical-align: -2px; }
-  h2 { font-size: 1.15rem; margin: 28px 0 12px; padding: 8px 12px;
+
+  .status-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 10px 12px; margin: 8px 0 4px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.88rem;
+  }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  .status-dot.loading { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .status-dot.ok { background: var(--ok); }
+  .status-dot.err { background: var(--err); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .status-text { flex: 1 1 auto; color: var(--text); }
+  .status-text .meta { color: var(--muted); font-size: 0.82rem; margin-left: 6px; }
+
+  button.refresh {
+    background: var(--accent); color: #1a1a1a; border: 0; border-radius: 20px;
+    padding: 7px 14px; font-weight: 700; font-size: 0.88rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    box-shadow: 0 2px 8px rgba(255,204,51,.25);
+    transition: transform .1s ease;
+  }
+  button.refresh:hover { transform: translateY(-1px); }
+  button.refresh:active { transform: translateY(0); }
+  button.refresh:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+  button.refresh .spin { display: inline-block; }
+  button.refresh.loading .spin { animation: rot 1s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg) } }
+
+  h2 { font-size: 1.12rem; margin: 26px 0 10px; padding: 8px 12px;
     background: linear-gradient(90deg, var(--panel-2), transparent);
     border-left: 4px solid var(--accent); border-radius: 4px; }
-  h2 .ru { color: var(--muted); font-weight: 400; font-size: 0.9rem; margin-left: 8px; }
+  h2 .ru { color: var(--muted); font-weight: 400; font-size: 0.88rem; margin-left: 8px; }
+  h2 .cnt { color: var(--muted); font-weight: 400; font-size: 0.8rem; margin-left: 6px; }
+
   ol.stories { list-style: none; margin: 0; padding: 0; counter-reset: item; }
   ol.stories > li { counter-increment: item; background: var(--panel); border: 1px solid var(--border);
     border-radius: 10px; padding: 14px 16px 12px 46px; margin: 10px 0; position: relative; }
@@ -44,275 +77,249 @@
   .title { display: block; font-size: 1.02rem; font-weight: 600; color: var(--accent-2);
     text-decoration: none; word-break: break-word; }
   .title:hover { text-decoration: underline; }
-  .zh { display: block; margin-top: 6px; color: var(--text); opacity: 0.92; font-size: 0.98rem; }
+  .zh { display: block; margin-top: 6px; color: var(--text); opacity: 0.92; font-size: 0.97rem; }
+  .zh.empty { color: var(--muted); font-style: italic; }
   .zh::before { content: "中译："; color: var(--accent); font-weight: 600; margin-right: 4px; }
   .source { display: block; margin-top: 6px; color: var(--muted); font-size: 0.8rem; }
   .source strong { color: #d0d7e2; font-weight: 600; }
-  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border);
+
+  .empty-note { padding: 12px; background: var(--panel); border: 1px dashed var(--border);
+    border-radius: 8px; color: var(--muted); font-size: 0.9rem; }
+
+  .skeleton { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin: 10px 0; }
+  .skeleton .bar { height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg, #202839, #2d3752, #202839);
+    background-size: 200% 100%; animation: shim 1.2s linear infinite; margin: 6px 0; }
+  .skeleton .bar.w80 { width: 80% } .skeleton .bar.w60 { width: 60% } .skeleton .bar.w40 { width: 40% }
+  @keyframes shim { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+
+  .fab {
+    position: fixed; right: 16px; bottom: 20px; z-index: 20;
+    background: var(--accent-2); color: #fff; border: 0; border-radius: 50%;
+    width: 56px; height: 56px; font-size: 1.5rem; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(78,161,255,.45);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .1s ease;
+  }
+  .fab:active { transform: scale(0.94); }
+  .fab.loading .spin { animation: rot 1s linear infinite; }
+  .fab:disabled { opacity: .55; cursor: not-allowed; }
+
+  footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--border);
     color: var(--muted); font-size: 0.82rem; }
   code { background: #0b0f18; padding: 1px 6px; border-radius: 4px; color: #ffd479; font-size: 0.85rem; }
+
   @media (max-width: 520px) {
-    .wrap { padding: 16px 12px 60px; }
-    h1 { font-size: 1.22rem; }
-    h2 { font-size: 1.02rem; }
-    .title { font-size: 0.98rem; }
-    .zh { font-size: 0.94rem; }
+    .wrap { padding: 16px 12px 90px; }
+    h1 { font-size: 1.2rem; }
+    h2 { font-size: 1rem; }
+    .title { font-size: 0.97rem; }
+    .zh { font-size: 0.93rem; }
+    .status-bar { padding: 8px 10px; font-size: 0.82rem; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <h1><span class="flag">RU</span>俄罗斯主流媒体重点新闻 · 2026 年 7 月 21 日</h1>
-  <div class="sub">信息来源全部为俄语原文网站：ТАСС、РИА Новости、Российская газета、РТ на русском、Kremlin.ru、Интерфакс、Коммерсантъ、Известия、Lenta.ru、Fontanka、Комсомольская правда、Парламентская газета、Москва 24 等。</div>
-  <div class="meta">每条新闻的<strong>俄语原标题</strong>本身就是超链接，点击即可打开该俄媒的原新闻页面；标题正下方一行是<strong>中文翻译</strong>。按你要求的顺序分为五个板块：政治 / 经济 / 社会 / 普京 / 梅金斯基。</div>
+  <h1><span class="flag">RU</span>俄罗斯主流媒体重点新闻</h1>
+  <div class="sub">来源为俄语原文站：ТАСС / РИА / РТ / Lenta.ru / Российская газета / Коммерсантъ / Известия / Kremlin.ru 等。俄语原标题即为超链接，标题正下方是中文翻译。</div>
+  <div class="status-bar">
+    <div id="statusDot" class="status-dot loading" aria-hidden="true"></div>
+    <div id="statusText" class="status-text">正在自动获取最新新闻…</div>
+    <button id="btnRefresh" class="refresh loading" type="button" aria-label="手动更新">
+      <span class="spin">🔄</span><span>手动更新</span>
+    </button>
+  </div>
 </header>
 
-<!-- ================= 1. 政治 ================= -->
-<h2>1. 政治新闻 <span class="ru">— Политика</span></h2>
-<ol class="stories">
+<main id="content">
+  <!-- 加载骨架 -->
+  <h2>加载中… <span class="ru">— обновление</span></h2>
+  <div class="skeleton"><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+  <div class="skeleton"><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+  <div class="skeleton"><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+</main>
 
-  <li>
-    <a class="title" href="https://lenta.ru/news/2026/07/21/tsik-zaregistriroval-spisok-kandidatov-v-gosdumu-ot-edinoy-rossii/" target="_blank" rel="noopener">
-      ЦИК зарегистрировал список кандидатов в Госдуму от «Единой России»
-    </a>
-    <span class="zh">中央选举委员会正式登记「统一俄罗斯党」参加第九届国家杜马选举的联邦候选人名单，前五名由拉夫罗夫、索比亚宁、利沃娃-别洛娃、波杜布内、戈洛温组成。</span>
-    <span class="source"><strong>Lenta.ru</strong> · 2026-07-21 13:56</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://lenta.ru/news/2026/07/21/peskov-nazval-prichinu-provedeniya-svo/" target="_blank" rel="noopener">
-      Песков назвал причину проведения СВО
-    </a>
-    <span class="zh">佩斯科夫说明「特别军事行动」的目的：就是为了不让北约军队出现在乌克兰领土上，并强调外国军事人员在乌克兰驻扎对俄罗斯不可接受。</span>
-    <span class="source"><strong>Lenta.ru</strong> · 2026-07-21 12:39（转引自 РИА Новости）</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://lenta.ru/news/2026/07/21/vsu-vypustili-v-storonu-rossii-rakety-bolshoy-dalnosti-flamingo-i-sotni-bpla/" target="_blank" rel="noopener">
-      ВСУ выпустили в сторону России ракеты большой дальности «Фламинго» и сотни БПЛА
-    </a>
-    <span class="zh">乌军对俄发射远程「火烈鸟」巡航导弹并投入数百架无人机，俄国防部称防空系统击落 7 枚「火烈鸟」、8 枚 HIMARS 火箭弹、11 枚制导航空炸弹和 655 架固定翼无人机。</span>
-    <span class="source"><strong>Lenta.ru</strong> · 2026-07-21 12:54（俄国防部）</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.m24.ru/news/21072026/922070" target="_blank" rel="noopener">
-      Песков заявил, что Кремль не надеется на улучшение отношений с Лондоном при Бернэме
-    </a>
-    <span class="zh">佩斯科夫表示：克里姆林宫不指望在英国新首相安迪·伯纳姆（Andy Burnham）任内俄英关系会有所改善——他上任后首个表态就是无条件支持乌克兰。</span>
-    <span class="source"><strong>Москва 24</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://rg.ru/2026/07/21/gosduma-otkazala-migrantam-s-sudimostiu-v-grazhdanstve-i-vnzh.html" target="_blank" rel="noopener">
-      Госдума отказала мигрантам с судимостью в гражданстве и ВНЖ
-    </a>
-    <span class="zh">国家杜马三读通过法案：外国人只要在俄罗斯境内或境外有任何未撤销的犯罪前科，一律不得获得俄国籍或居留证；如事后发现前科，已发的证件将被撤销。法律公布 180 天后生效。</span>
-    <span class="source"><strong>Российская газета</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://russian.rt.com/russia/news/1659673-ekstremizm-hakerskie-gruppirovki-sud" target="_blank" rel="noopener">
-      В России признали экстремистскими хакерские группировки Cyberpartizans и Silent
-    </a>
-    <span class="zh">俄罗斯最高法院裁定黑客组织「Cyberpartizans（白俄网络游击队）」和「Silent Crow（沉默乌鸦）」为极端主义组织并在俄境内取缔，判决立即生效。</span>
-    <span class="source"><strong>РТ на русском</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://russian.rt.com/russia/news/1659646-fsb-likvidirovannyi-tyumen" target="_blank" rel="noopener">
-      ФСБ: ликвидированный в Тюмени агент Киева готовил взрыв на железнодорожных путях
-    </a>
-    <span class="zh">俄联邦安全局（ФСБ）通报：在秋明市被击毙的基辅情报机构特工曾密谋在秋明炼油厂的铁路线上放置自制爆炸装置，此前已侦察列车时刻表和铁路安保薄弱点。</span>
-    <span class="source"><strong>РТ на русском</strong> · 2026-07-21（转引自 РИА Новости）</span>
-  </li>
-</ol>
-
-<!-- ================= 2. 经济 ================= -->
-<h2>2. 经济新闻 <span class="ru">— Экономика</span></h2>
-<ol class="stories">
-
-  <li>
-    <a class="title" href="https://russian.rt.com/business/news/1659871-cb-kurs-dollara" target="_blank" rel="noopener">
-      ЦБ повысил курсы доллара, евро и юаня на 22 июля
-    </a>
-    <span class="zh">俄央行公布 7 月 22 日官方汇率：美元 78.554 卢布（上调 23.81 戈比）、欧元 89.7558 卢布（上调 20.16 戈比）、人民币 11.6091 卢布（上调 3.93 戈比）。</span>
-    <span class="source"><strong>РТ на русском</strong> · 2026-07-21（俄罗斯银行）</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://russian.rt.com/business/news/1659712-duma-zakon-valyuta" target="_blank" rel="noopener">
-      Дума приняла закон о регулировании цифровых валют и цифровых прав в России
-    </a>
-    <span class="zh">国家杜马通过《数字货币与数字权利法》：正式确立加密货币交易所、数字托管机构和市场参与者的运营规则，并规定投资者购买加密货币的条件，同时监管挖矿、发行和数字权利流通。</span>
-    <span class="source"><strong>РТ на русском</strong> · 2026-07-21 14:30（转引自 ТАСС）</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.kommersant.ru/doc/8831350" target="_blank" rel="noopener">
-      Госдума приняла закон об импортном демпфере на дизельное топливо
-    </a>
-    <span class="zh">国家杜马二读、三读通过对进口柴油实施「阻尼器」（补贴）机制的法案：白俄罗斯进口柴油的补偿系数升至 0.9，补贴范围覆盖 2026 年 7 月至 2027 年 6 月的国内市场销售。</span>
-    <span class="source"><strong>Коммерсантъ</strong> · 2026-07-21 14:37</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.fontanka.ru/2026/07/21/76545090/" target="_blank" rel="noopener">
-      Новак заявил, что топливный рынок начал стабилизироваться
-    </a>
-    <span class="zh">副总理诺瓦克在政府会议后宣布：由于成品油出口禁令、扩大进口和推迟炼厂检修等措施初见成效，全国燃油市场开始企稳，多个地区已解除限制，加油站数量增加、排队现象减少。</span>
-    <span class="source"><strong>Фонтанка.ру</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.pnp.ru/economics/volodin-situaciya-na-toplivnom-rynke-v-blizhayshee-vremya-nachnet-menyatsya.html" target="_blank" rel="noopener">
-      Володин: Ситуация на топливном рынке в ближайшее время начнет меняться
-    </a>
-    <span class="zh">杜马主席沃洛金在 21 日全会上表示：一两天内燃油市场在价格和供应两方面都将出现根本性变化，同日杜马已通过政府提交的稳定燃油市场专项法案。</span>
-    <span class="source"><strong>Парламентская газета</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://ru.themoscowtimes.com/2026/07/21/rubl-u-mnogodnevnykh-minimumov-s-shansami-podrasti-pered-skorymi-nalogami-a201299" target="_blank" rel="noopener">
-      Рубль у многодневных минимумов с шансами подрасти перед скорыми налогами
-    </a>
-    <span class="zh">21 日盘中卢布跌至多日低点，美元/卢布报 78.90（较上日跌 0.4%），但分析师预计 7 月 28 日的税期结算和高油价将对卢布形成支撑。</span>
-    <span class="source"><strong>The Moscow Times（俄文版）</strong> · 2026-07-21（转引路透社莫斯科分社）</span>
-  </li>
-</ol>
-
-<!-- ================= 3. 社会 ================= -->
-<h2>3. 社会新闻 <span class="ru">— Общество и происшествия</span></h2>
-<ol class="stories">
-
-  <li>
-    <a class="title" href="https://lenta.ru/articles/2026/07/21/ataka-na-sklady-wildberries-v-iyule-2026-goda/" target="_blank" rel="noopener">
-      Атака БПЛА на склады Wildberries 2026: последствия, компенсации, выплаты пострадавшим и сроки открытия складов
-    </a>
-    <span class="zh">7 月 18 日夜间，乌军无人机袭击了 Wildberries 位于坦波夫州科托夫斯克和莫斯科州电钢城（Электросталь）的两处物流中心；夜班员工 7 人罹难、数十人受伤。CEO 塔季扬娜·金承诺：遇难者家属抚恤 200 万卢布、重伤者 100 万卢布，并研究对货物受损的卖家实施财务补助。</span>
-    <span class="source"><strong>Lenta.ru</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://iz.ru/2134618/ataka-vsu-na-logisticheskie-tcentry-v-kotovske-i-elektrostali-chto-izvestno-izi" target="_blank" rel="noopener">
-      Атака ВСУ на логистические центры в Котовске и Электростали. Что известно
-    </a>
-    <span class="zh">《消息报》梳理事件全貌：科托夫斯克仓库袭击导致 7 死 25 伤，电钢城仓库袭击 24 人送医（部分危重）；俄侦查委员会已以「恐怖袭击」罪名立案；Wildberries 已将被袭仓库中的货品下架。</span>
-    <span class="source"><strong>Известия</strong> · 2026-07-2x</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.ural.kp.ru/online/news/7081680/" target="_blank" rel="noopener">
-      В Свердловской области за сутки затопило свыше 750 домов и участков
-    </a>
-    <span class="zh">斯维尔德洛夫斯克州洪灾持续：截至 7 月 21 日仍有 521 栋民房、3 122 块菜园地、4 段公路和 10 座低水位桥梁被淹，22 个居民点交通中断；24 小时内新淹 22 栋房屋、746 块地，同时有 45 栋民房、350 块地退水。</span>
-    <span class="source"><strong>Комсомольская правда — Урал</strong> · 2026-07-21（俄紧急情况部数据）</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://ural-news.net/society/2026/07/17/600692.html" target="_blank" rel="noopener">
-      Артём Жога: Урал столкнулся с аномальным дождевым паводком
-    </a>
-    <span class="zh">总统驻乌拉尔联邦区全权代表阿尔乔姆·若加视察灾区：斯维尔德洛夫斯克州自 6 月以来降水量达常年 4 倍月均值；他与紧急情况部一同进行空中巡视，指示待洪水退去后立即评估损失并开展居民点消毒和文件补办。</span>
-    <span class="source"><strong>Лента новостей Екатеринбурга</strong> · 2026-07-17</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://russian.rt.com/ussr/article/1659680-udar-port-odessa-vsu" target="_blank" rel="noopener">
-      Удары высокоточным оружием: ВС РФ поразили места хранения военных грузов в порту Одесса
-    </a>
-    <span class="zh">俄军夜间使用空基高精度武器打击敖德萨港：摧毁了为乌军供应物资的港口设施，同时击毁远程无人机组装/存储点及乌方燃料能源和交通基础设施；「北」集群同期在哈尔科夫州夺取沃洛霍夫斯科耶。</span>
-    <span class="source"><strong>РТ на русском</strong> · 2026-07-21（俄国防部每日战报）</span>
-  </li>
-</ol>
-
-<!-- ================= 4. 普京 ================= -->
-<h2>4. 普京新闻 <span class="ru">— Владимир Путин</span></h2>
-<ol class="stories">
-
-  <li>
-    <a class="title" href="http://kremlin.ru/events/president/news/80320" target="_blank" rel="noopener">
-      Встреча с губернатором Еврейской автономной области Марией Костюк
-    </a>
-    <span class="zh">7 月 21 日 14:05，普京在克里姆林宫会见犹太自治州州长玛丽亚·科斯秋克，双方就该州工业、投资、物流等社会经济发展、教育项目以及对参战人员及其家属的支持措施进行了讨论。</span>
-    <span class="source"><strong>Kremlin.ru（俄罗斯总统官网）</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://vfokuse.mail.ru/news/69632423-putin-provel-vstrechu-s-gubernatorom-evrejskoj-avtonomnoj-oblasti/" target="_blank" rel="noopener">
-      Путин провел встречу с губернатором Еврейской автономной области
-    </a>
-    <span class="zh">Mail.ru 报道普京与科斯秋克州长会谈的主要话题——地区经济发展和对特别军事行动参与者的支持；科斯秋克讲述了阵亡英雄纳伊尔·加吉马戈梅多夫的母亲对儿子牺牲「悲伤与骄傲并存」的感受，普京评价：「说得很美、很有分量。」</span>
-    <span class="source"><strong>Mail.ru «В фокусе»</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://news.mail.ru/society/71713318/" target="_blank" rel="noopener">
-      Путин возглавит делегацию России на саммите АТЭС в Китае
-    </a>
-    <span class="zh">俄罗斯外交部无任所大使别尔迪耶夫宣布：普京总统将亲自率俄代表团出席 2026 年 11 月 18–19 日在中国深圳举行的亚太经合组织（АТЭС）领导人非正式会议。</span>
-    <span class="source"><strong>Новости Mail（每日综述）</strong> · 2026-07-21</span>
-  </li>
-
-  <li>
-    <a class="title" href="http://prezident.org/tekst/stenogramma-soveschanija-vladimira-putina-s-chlenami-pravitelstva-08-07-2026.html" target="_blank" rel="noopener">
-      Стенограмма совещания Владимира Путина с членами Правительства 8 июля 2026 года
-    </a>
-    <span class="zh">俄罗斯总统官网速记稿：普京通过视频连线主持政府会议，主题为「当前形势下燃料与运输综合体的工作」，要求副总理诺瓦克和交通部长尼基京就加油站汽油供应问题「在动态模式下」向本人与总理持续汇报——这是本轮 21 日燃油稳定措施的直接源头。</span>
-    <span class="source"><strong>Prezident.org（速记稿全文）</strong> · 2026-07-08</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://ru.themoscowtimes.com/2026/07/21/kreml-ataka-na-sklady-wildberries-sozdala-neprostuyu-situatsiyu-iz-za-ubytkov-biznesa-a201329" target="_blank" rel="noopener">
-      Кремль: Атака на склады Wildberries создала непростую ситуацию из-за убытков бизнеса
-    </a>
-    <span class="zh">佩斯科夫代表克里姆林宫表态：对 Wildberries 仓库的袭击给公司本身以及中小企业带来了「不轻松的局面」，目前政府正在处理这一问题——反映普京团队对该社会经济事件的关注。</span>
-    <span class="source"><strong>The Moscow Times（俄文版）</strong> · 2026-07-21（转引路透社）</span>
-  </li>
-</ol>
-
-<!-- ================= 5. 梅金斯基 ================= -->
-<h2>5. 梅金斯基新闻 <span class="ru">— Владимир Мединский</span></h2>
-<ol class="stories">
-
-  <li>
-    <a class="title" href="https://www.interfax.ru/russia/1099276" target="_blank" rel="noopener">
-      Мединский считает возможным объединить экзамены по обществознанию и истории
-    </a>
-    <span class="zh">总统助理梅金斯基在「教师博主·社会学」全会上支持将中学毕业考试的「社会学」与「历史」合并为一门，题目比例约「历史 8 : 社会学 2」，但最终决定权在教育部，落地至少需要三年时间。</span>
-    <span class="source"><strong>Интерфакс</strong> · 2026-06-30</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://www.pnp.ru/social/medinskiy-podderzhal-ideyu-obedinit-ekzameny-po-istorii-i-obshhestvoznaniyu.html" target="_blank" rel="noopener">
-      Мединский поддержал идею объединить экзамены по истории и обществознанию
-    </a>
-    <span class="zh">《议会报》对同一表态的详细报道：梅金斯基强调「历史与社会学的合并」将有助于让考试更能反映真实的世界观取向；他重申题目比例「8 比 2 更倾向历史」为参考建议。</span>
-    <span class="source"><strong>Парламентская газета</strong> · 2026-06-30</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://lenta.ru/news/2026/07/09/nazvany-sroki-provedeniya-pervyh-ustnyh-ekzamenov-po-istorii-dlya-rossiyskih-shkolnikov/" target="_blank" rel="noopener">
-      Названы сроки проведения первых устных экзаменов по истории для российских школьников
-    </a>
-    <span class="zh">Lenta.ru 后续报道：官方公布首场俄罗斯中小学生「历史口试」举办时间；文中回顾梅金斯基关于将历史与社会学合并、比例 8:2 的建议，作为该改革的政策背景。</span>
-    <span class="source"><strong>Lenta.ru</strong> · 2026-07-09</span>
-  </li>
-
-  <li>
-    <a class="title" href="https://novosti-segodnya.ru/segodnya/878765-medinskiy-medvedev-lichno-redaktiruet-uchebniki-obschestvoznaniya" target="_blank" rel="noopener">
-      Мединский: Медведев лично редактирует учебники обществознания
-    </a>
-    <span class="zh">在圣彼得堡国际法律论坛上，梅金斯基透露：俄联邦安全会议副主席梅德韦杰夫亲自参与俄罗斯中学 9–11 年级新一版《社会学》教科书的文字编辑——转引自 РИА Новости。</span>
-    <span class="source"><strong>Новости сегодня</strong> · 2026-06-24（转引自 РИА Новости）</span>
-  </li>
-</ol>
-
-<footer>
-  <p>本页于 2026-07-21 由 Cursor Cloud Agent 汇编，全部信息取自俄罗斯本土俄语版新闻网站；文中不再引用任何俄媒的英文分站。</p>
-  <p>每条新闻的标题为原文超链接，点击即可在新标签页打开该俄媒的原新闻页；标题下方一行为中文翻译；再下一行注明来源与发布时间。分类顺序：政治 → 经济 → 社会 → 普京 → 梅金斯基。</p>
+<footer id="footerNote">
+  <p>页面打开时会自动通过后端 <code>/api/russia-news</code> 并行抓取 8 家俄媒 RSS，按俄文关键词归入 <strong>政治 → 经济 → 社会 → 普京 → 梅金斯基</strong> 五大板块，标题走无鉴权翻译端点翻成中文。数据 10 分钟内存缓存；点击「手动更新」或右下角悬浮按钮可强制刷新。</p>
+  <p>若自动更新失败（例如后端未部署、翻译端点不可达等），页面会显示 2026-07-21 的静态兜底新闻，点「手动更新」按钮仍会重试。</p>
 </footer>
+
+<button id="fabRefresh" class="fab" type="button" aria-label="手动更新（悬浮按钮）">
+  <span class="spin">🔄</span>
+</button>
+
 </div>
+
+<script>
+// ================= 静态兜底数据（2026-07-21 快照） =================
+// 当后端 API 不可用时使用；确保离线或未部署时依然有可点击的俄语原标题 + 中译。
+const FALLBACK = {
+  generated_at: "2026-07-21T21:00:00Z",
+  cached: true,
+  fallback: true,
+  sources: ["ТАСС","РИА","Lenta.ru","Российская газета","РТ на русском","Коммерсантъ","Известия","Kremlin.ru"],
+  buckets: {
+    politics: [
+      {title:"ЦИК зарегистрировал список кандидатов в Госдуму от «Единой России»", url:"https://lenta.ru/news/2026/07/21/tsik-zaregistriroval-spisok-kandidatov-v-gosdumu-ot-edinoy-rossii/", source:"Lenta.ru", title_zh:"中央选举委员会正式登记「统一俄罗斯党」参加第九届国家杜马选举的联邦候选人名单。"},
+      {title:"Песков назвал причину проведения СВО", url:"https://lenta.ru/news/2026/07/21/peskov-nazval-prichinu-provedeniya-svo/", source:"Lenta.ru", title_zh:"佩斯科夫说明「特别军事行动」的目的：不让北约军队出现在乌克兰。"},
+      {title:"ВСУ выпустили в сторону России ракеты большой дальности «Фламинго» и сотни БПЛА", url:"https://lenta.ru/news/2026/07/21/vsu-vypustili-v-storonu-rossii-rakety-bolshoy-dalnosti-flamingo-i-sotni-bpla/", source:"Lenta.ru", title_zh:"乌军向俄发射「火烈鸟」远程巡航导弹并投入数百架无人机。"},
+      {title:"Песков заявил, что Кремль не надеется на улучшение отношений с Лондоном при Бернэме", url:"https://www.m24.ru/news/21072026/922070", source:"Москва 24", title_zh:"佩斯科夫：克宫不指望英国新首相伯纳姆任内俄英关系会改善。"},
+      {title:"Госдума отказала мигрантам с судимостью в гражданстве и ВНЖ", url:"https://rg.ru/2026/07/21/gosduma-otkazala-migrantam-s-sudimostiu-v-grazhdanstve-i-vnzh.html", source:"Российская газета", title_zh:"国家杜马通过法案：有前科的外国人一律不得获得俄国籍或居留证。"},
+      {title:"В России признали экстремистскими хакерские группировки Cyberpartizans и Silent", url:"https://russian.rt.com/russia/news/1659673-ekstremizm-hakerskie-gruppirovki-sud", source:"РТ на русском", title_zh:"俄最高法院裁定 Cyberpartizans 和 Silent Crow 为极端主义组织并取缔。"},
+      {title:"ФСБ: ликвидированный в Тюмени агент Киева готовил взрыв на железнодорожных путях", url:"https://russian.rt.com/russia/news/1659646-fsb-likvidirovannyi-tyumen", source:"РТ на русском", title_zh:"联邦安全局：在秋明被击毙的基辅特工曾密谋在炼油厂铁路线上放置爆炸装置。"}
+    ],
+    economy: [
+      {title:"ЦБ повысил курсы доллара, евро и юаня на 22 июля", url:"https://russian.rt.com/business/news/1659871-cb-kurs-dollara", source:"РТ на русском", title_zh:"俄央行公布 7 月 22 日汇率：美元 78.55、欧元 89.76、人民币 11.61 卢布，全部上调。"},
+      {title:"Дума приняла закон о регулировании цифровых валют и цифровых прав в России", url:"https://russian.rt.com/business/news/1659712-duma-zakon-valyuta", source:"РТ на русском", title_zh:"国家杜马通过《数字货币与数字权利法》，正式确立加密货币交易与挖矿的监管规则。"},
+      {title:"Госдума приняла закон об импортном демпфере на дизельное топливо", url:"https://www.kommersant.ru/doc/8831350", source:"Коммерсантъ", title_zh:"国家杜马通过对进口柴油实施补贴机制的法案，白俄柴油补偿系数升至 0.9。"},
+      {title:"Новак заявил, что топливный рынок начал стабилизироваться", url:"https://www.fontanka.ru/2026/07/21/76545090/", source:"Фонтанка.ру", title_zh:"副总理诺瓦克：由于出口禁令与扩大进口等措施，全国燃油市场开始企稳。"},
+      {title:"Володин: Ситуация на топливном рынке в ближайшее время начнет меняться", url:"https://www.pnp.ru/economics/volodin-situaciya-na-toplivnom-rynke-v-blizhayshee-vremya-nachnet-menyatsya.html", source:"Парламентская газета", title_zh:"杜马主席沃洛金：一两天内燃油市场在价格和供应上都将根本性改变。"},
+      {title:"Рубль у многодневных минимумов с шансами подрасти перед скорыми налогами", url:"https://ru.themoscowtimes.com/2026/07/21/rubl-u-mnogodnevnykh-minimumov-s-shansami-podrasti-pered-skorymi-nalogami-a201299", source:"The Moscow Times (RU)", title_zh:"卢布跌至多日低点，但 7 月 28 日税期与高油价有望形成支撑。"}
+    ],
+    social: [
+      {title:"Атака БПЛА на склады Wildberries 2026: последствия, компенсации, выплаты пострадавшим и сроки открытия складов", url:"https://lenta.ru/articles/2026/07/21/ataka-na-sklady-wildberries-v-iyule-2026-goda/", source:"Lenta.ru", title_zh:"7 月 18 日夜乌军无人机袭击 Wildberries 科托夫斯克与电钢城仓库，7 死数十伤，公司公布赔偿方案。"},
+      {title:"Атака ВСУ на логистические центры в Котовске и Электростали. Что известно", url:"https://iz.ru/2134618/ataka-vsu-na-logisticheskie-tcentry-v-kotovske-i-elektrostali-chto-izvestno-izi", source:"Известия", title_zh:"《消息报》梳理袭击全貌，俄侦查委员会已以「恐怖袭击」罪立案。"},
+      {title:"В Свердловской области за сутки затопило свыше 750 домов и участков", url:"https://www.ural.kp.ru/online/news/7081680/", source:"КП — Урал", title_zh:"斯维尔德洛夫斯克州洪灾持续：521 栋民房、3 122 块菜地被淹，22 个居民点交通中断。"},
+      {title:"Артём Жога: Урал столкнулся с аномальным дождевым паводком", url:"https://ural-news.net/society/2026/07/17/600692.html", source:"Лента новостей Екатеринбурга", title_zh:"总统驻乌拉尔联邦区代表若加视察灾区：自 6 月降水已达月均值 4 倍。"},
+      {title:"Удары высокоточным оружием: ВС РФ поразили места хранения военных грузов в порту Одесса", url:"https://russian.rt.com/ussr/article/1659680-udar-port-odessa-vsu", source:"РТ на русском", title_zh:"俄军夜袭敖德萨港：摧毁乌军物资仓库、远程无人机组装点与燃料能源基础设施。"}
+    ],
+    putin: [
+      {title:"Встреча с губернатором Еврейской автономной области Марией Костюк", url:"http://kremlin.ru/events/president/news/80320", source:"Kremlin.ru", title_zh:"普京在克里姆林宫会见犹太自治州州长玛丽亚·科斯秋克，讨论社会经济发展与对参战人员及家属的支持。"},
+      {title:"Путин провел встречу с губернатором Еврейской автономной области", url:"https://vfokuse.mail.ru/news/69632423-putin-provel-vstrechu-s-gubernatorom-evrejskoj-avtonomnoj-oblasti/", source:"Mail.ru «В фокусе»", title_zh:"Mail.ru 报道同一次会见：普京对烈士母亲的一段致敬表达评价「说得很美、很有分量」。"},
+      {title:"Путин возглавит делегацию России на саммите АТЭС в Китае", url:"https://news.mail.ru/society/71713318/", source:"Новости Mail", title_zh:"外交部无任所大使别尔迪耶夫：普京将亲自率俄代表团出席 11 月 18–19 日在深圳的 APEC 峰会。"},
+      {title:"Стенограмма совещания Владимира Путина с членами Правительства 8 июля 2026 года", url:"http://prezident.org/tekst/stenogramma-soveschanija-vladimira-putina-s-chlenami-pravitelstva-08-07-2026.html", source:"Prezident.org", title_zh:"总统官网速记稿：普京主持政府会议讨论燃料与运输综合体运行——即 21 日燃油稳定措施的源头。"},
+      {title:"Кремль: Атака на склады Wildberries создала непростую ситуацию из-за убытков бизнеса", url:"https://ru.themoscowtimes.com/2026/07/21/kreml-ataka-na-sklady-wildberries-sozdala-neprostuyu-situatsiyu-iz-za-ubytkov-biznesa-a201329", source:"The Moscow Times (RU)", title_zh:"佩斯科夫代表克宫表态：袭击 Wildberries 给公司和中小企业造成困境，政府正在处理。"}
+    ],
+    medinsky: [
+      {title:"Мединский считает возможным объединить экзамены по обществознанию и истории", url:"https://www.interfax.ru/russia/1099276", source:"Интерфакс", title_zh:"总统助理梅金斯基支持将中学毕业「社会学」与「历史」合并为一门，比例约「历史 8 : 社会学 2」。"},
+      {title:"Мединский поддержал идею объединить экзамены по истории и обществознанию", url:"https://www.pnp.ru/social/medinskiy-podderzhal-ideyu-obedinit-ekzameny-po-istorii-i-obshhestvoznaniyu.html", source:"Парламентская газета", title_zh:"《议会报》详细报道梅金斯基关于历史与社会学合并考试的建议。"},
+      {title:"Названы сроки проведения первых устных экзаменов по истории для российских школьников", url:"https://lenta.ru/news/2026/07/09/nazvany-sroki-provedeniya-pervyh-ustnyh-ekzamenov-po-istorii-dlya-rossiyskih-shkolnikov/", source:"Lenta.ru", title_zh:"官方公布俄罗斯中小学生首场「历史口试」时间，背景为梅金斯基提出的 8:2 合并方案。"},
+      {title:"Мединский: Медведев лично редактирует учебники обществознания", url:"https://novosti-segodnya.ru/segodnya/878765-medinskiy-medvedev-lichno-redaktiruet-uchebniki-obschestvoznaniya", source:"Новости сегодня", title_zh:"梅金斯基在圣彼得堡国际法律论坛透露：梅德韦杰夫亲自参与新版《社会学》教材的文字编辑。"}
+    ]
+  }
+};
+
+// ================= 渲染 =================
+const CATEGORY_META = [
+  { key: "politics", zh: "政治新闻", ru: "Политика" },
+  { key: "economy",  zh: "经济新闻", ru: "Экономика" },
+  { key: "social",   zh: "社会新闻", ru: "Общество и происшествия" },
+  { key: "putin",    zh: "普京新闻", ru: "Владимир Путин" },
+  { key: "medinsky", zh: "梅金斯基新闻", ru: "Владимир Мединский" }
+];
+
+const $ = id => document.getElementById(id);
+const statusDot = $("statusDot");
+const statusText = $("statusText");
+const btnRefresh = $("btnRefresh");
+const fabRefresh = $("fabRefresh");
+const content = $("content");
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function fmtTime(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString("zh-CN", { hour12: false });
+  } catch { return iso; }
+}
+
+function setStatus(kind, text, meta) {
+  statusDot.className = "status-dot " + kind;
+  const metaHtml = meta ? ` <span class="meta">${esc(meta)}</span>` : "";
+  statusText.innerHTML = esc(text) + metaHtml;
+  const isLoading = kind === "loading";
+  btnRefresh.disabled = isLoading;
+  fabRefresh.disabled = isLoading;
+  btnRefresh.classList.toggle("loading", isLoading);
+  fabRefresh.classList.toggle("loading", isLoading);
+}
+
+function renderBuckets(data, isFallback) {
+  const buckets = data && data.buckets ? data.buckets : {};
+  const parts = [];
+  for (const meta of CATEGORY_META) {
+    const items = buckets[meta.key] || [];
+    parts.push(
+      `<h2>${esc(meta.zh)} <span class="ru">— ${esc(meta.ru)}</span>` +
+      `<span class="cnt">共 ${items.length} 条</span></h2>`
+    );
+    if (items.length === 0) {
+      parts.push(`<div class="empty-note">该板块暂无匹配的新闻，可点击「手动更新」重新抓取。</div>`);
+      continue;
+    }
+    const lis = items.map(it => {
+      const zh = (it.title_zh || "").trim();
+      const zhHtml = zh
+        ? `<span class="zh">${esc(zh)}</span>`
+        : `<span class="zh empty">（自动翻译暂不可用，点击标题查看俄语原文）</span>`;
+      return (
+        `<li>` +
+          `<a class="title" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>` +
+          zhHtml +
+          `<span class="source"><strong>${esc(it.source || "")}</strong>` +
+            (it.published ? ` · ${esc(it.published)}` : "") +
+          `</span>` +
+        `</li>`
+      );
+    }).join("");
+    parts.push(`<ol class="stories">${lis}</ol>`);
+  }
+  if (isFallback) {
+    parts.unshift(
+      `<div class="empty-note">⚠️ 未连上后端 <code>/api/russia-news</code>，当前显示的是 2026-07-21 静态快照。请点击「手动更新」重试，或确认服务已部署到 Render。</div>`
+    );
+  }
+  content.innerHTML = parts.join("");
+}
+
+// ================= 拉取 =================
+async function loadNews(force) {
+  setStatus("loading", force ? "手动更新中…" : "正在自动获取最新新闻…");
+  try {
+    const url = "/api/russia-news" + (force ? "?refresh=1" : "");
+    const resp = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: { "Accept": "application/json" }
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    if (!data || !data.buckets) throw new Error("响应格式异常");
+    const total = typeof data.total === "number"
+      ? data.total
+      : Object.values(data.buckets).reduce((s, arr) => s + (arr ? arr.length : 0), 0);
+    const meta =
+      `${data.cached ? "缓存" : "实时"} · ${total} 条 · ` +
+      (data.sources ? data.sources.length : 0) + " 家俄媒 · " +
+      "更新时间 " + fmtTime(data.generated_at);
+    setStatus("ok", "自动更新成功", meta);
+    renderBuckets(data, false);
+  } catch (err) {
+    console.warn("自动更新失败，回退到静态快照：", err);
+    setStatus(
+      "err",
+      "自动更新失败：" + (err && err.message ? err.message : "未知错误") + "。已加载 2026-07-21 静态快照",
+      "点击「手动更新」重试"
+    );
+    renderBuckets(FALLBACK, true);
+  }
+}
+
+btnRefresh.addEventListener("click", () => loadNews(true));
+fabRefresh.addEventListener("click", () => loadNews(true));
+
+// 打开时自动更新
+loadNews(false);
+</script>
 </body>
 </html>
