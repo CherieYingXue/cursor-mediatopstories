@@ -303,11 +303,14 @@ async function loadNews(force) {
       ? data.total
       : Object.values(data.buckets).reduce((s, arr) => s + (arr ? arr.length : 0), 0);
     const st = data.stats || {};
-    const dropInfo = (typeof st.dropped_non_russia === "number")
-      ? ` · 已剔除 ${st.dropped_non_russia} 条非俄罗斯内容`
+    const ageInfo = (typeof st.max_age_hours === "number")
+      ? `近 ${st.max_age_hours} 小时`
       : "";
+    const dropInfo =
+      ((typeof st.dropped_stale === "number") ? ` · 剔除超期 ${st.dropped_stale}` : "") +
+      ((typeof st.dropped_non_russia === "number") ? ` · 剔除非俄 ${st.dropped_non_russia}` : "");
     const meta =
-      `${data.cached ? "缓存" : "实时"} · 保留 ${total} 条${dropInfo} · ` +
+      `${data.cached ? "缓存" : "实时"} · ${ageInfo} · 保留 ${total} 条${dropInfo} · ` +
       (data.sources ? data.sources.length : 0) + " 家俄媒 · " +
       "更新时间 " + fmtTime(data.generated_at);
     setStatus("ok", "自动更新成功", meta);

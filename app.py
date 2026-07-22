@@ -9,6 +9,7 @@ IBO 小测验等一切无关逻辑都不在本项目中；见 README。
 
 from __future__ import annotations
 
+import calendar
 import concurrent.futures
 import datetime as dt
 import os
@@ -283,7 +284,18 @@ SOURCE_PRIORITY: dict[str, int] = {
 }
 
 RUSSIA_CACHE_TTL = int(os.getenv("RUSSIA_CACHE_TTL", "600"))  # 秒；默认 10 分钟
+RUSSIA_MAX_AGE_HOURS = float(os.getenv("RUSSIA_MAX_AGE_HOURS", "24"))
 _russia_cache: dict[str, Any] = {"ts": 0.0, "data": None}
+
+
+def _parsed_to_ts(struct_time_or_none) -> float | None:
+    """把 feedparser 的 published_parsed（UTC struct_time）转成 Unix 时间戳。"""
+    if not struct_time_or_none:
+        return None
+    try:
+        return float(calendar.timegm(struct_time_or_none))
+    except Exception:
+        return None
 
 _POLITICS_KW = (
     "мид ", "госдум", "цик", "санкц", "нато", "всу", "сво", "переговор",
@@ -359,6 +371,9 @@ def _fetch_feed(name_url: tuple[str, str]) -> list[dict[str, Any]]:
         author = entry.get("author") or entry.get("dc_creator") or ""
         published = entry.get("published") or entry.get("updated") or ""
         summary = entry.get("summary") or entry.get("description") or ""
+        published_ts = _parsed_to_ts(
+            entry.get("published_parsed") or entry.get("updated_parsed")
+        )
 
         # 对 Google News 包装做清理：标题末尾 " - Carnegie Endowment for..." 去掉
         if is_google_news and " - " in title:
@@ -371,6 +386,7 @@ def _fetch_feed(name_url: tuple[str, str]) -> list[dict[str, Any]]:
                     "url": link,
                     "source": name,
                     "published": published,
+                    "published_ts": published_ts,
                     "author": author,
                     "summary": summary,
                 }
@@ -436,10 +452,26 @@ def api_russia_news():
         "medinsky": [],
         "experts": [],
     }
-    # 先过滤掉与俄罗斯无直接关联的条目，再分类
+    # (1) 时间过滤：只保留过去 RUSSIA_MAX_AGE_HOURS 小时（默认 24 小时）内发布的条目
+    #     没有 published_ts 的条目保守保留（避免把没日期字段的智库分析全砍掉）。
+    cutoff_ts = now - RUSSIA_MAX_AGE_HOURS * 3600
+    dropped_stale = 0
+    dropped_no_date = 0
+    fresh: list[dict[str, Any]] = []
+    for it in unique:
+        ts = it.get("published_ts")
+        if ts is None:
+            dropped_no_date += 1
+            fresh.append(it)  # 保守：没日期字段的智库分析类文章仍保留
+        elif ts >= cutoff_ts:
+            fresh.append(it)
+        else:
+            dropped_stale += 1
+
+    # (2) 内容过滤：只保留与俄罗斯直接相关的条目
     dropped_non_russia = 0
     russia_related: list[dict[str, Any]] = []
-    for it in unique:
+    for it in fresh:
         if is_russia_related(it["source"], it["title"], it.get("summary", "")):
             russia_related.append(it)
         else:
@@ -469,6 +501,7 @@ def api_russia_news():
         for it in lst:
             it.pop("_rank", None)
             it.pop("summary", None)  # 简介只用于分类，不必回给前端
+            it.pop("published_ts", None)  # 只用于时间过滤，不必回给前端
 
     to_translate = [it for lst in buckets.values() for it in lst]
 
@@ -489,8 +522,12 @@ def api_russia_news():
         "age_seconds": 0,
         "stats": {
             "fetched_unique": len(unique),
+            "within_last_hours": len(fresh),
             "russia_related": len(russia_related),
+            "dropped_stale": dropped_stale,
+            "kept_no_date": dropped_no_date,
             "dropped_non_russia": dropped_non_russia,
+            "max_age_hours": RUSSIA_MAX_AGE_HOURS,
         },
     }
     _russia_cache["ts"] = now
