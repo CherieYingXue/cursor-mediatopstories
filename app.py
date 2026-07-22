@@ -88,6 +88,15 @@ RUSSIA_FEEDS: list[tuple[str, str]] = [
         "q=site:carnegieendowment.org+(russia+OR+eurasia+OR+putin+OR+kremlin)"
         "&hl=en-US&gl=US&ceid=US:en",
     ),
+    # 俄乌前线 / 乌方视角（用于填充"俄乌关系"板块）
+    (
+        "Dzen · СВО",
+        "https://news.google.com/rss/search?"
+        "q=site:dzen.ru+(%D1%81%D0%B2%D0%BE+OR+%D1%81%D0%BF%D0%B5%D1%86%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F+OR+%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD)"
+        "&hl=ru&gl=RU&ceid=RU:ru",
+    ),
+    ("Укринформ", "https://www.ukrinform.net/rss/block-lastnews"),
+    ("Интерфакс-Украина", "https://ru.interfax.com.ua/news/last.rss"),
 ]
 
 # 重点专家：标题或作者中出现任何一个即进入"重点专家"板块（最高优先级）
@@ -268,19 +277,27 @@ def is_foreign_only(title: str, summary: str = "") -> bool:
 # 源优先级：智库最高，官方媒体次之，通讯社最后。用于每个板块内部排序，
 # 让分析类文章在通讯社快讯挤满 8 个位置之前先被选中。
 SOURCE_PRIORITY: dict[str, int] = {
+    # 智库：最高优先级
     "Валдайский клуб": 0,
     "Международная жизнь": 0,
     "РСМД": 0,
     "Carnegie Russia-Eurasia": 0,
+    # 官方媒体
     "Kremlin.ru": 1,
     "Российская газета": 1,
     "Известия": 1,
     "Взгляд": 1,
+    # 商业主流报刊
     "Коммерсантъ": 2,
+    # 乌方视角（俄乌关系板块的重要补充）
+    "Укринформ": 2,
+    "Интерфакс-Украина": 2,
+    # 通讯社快讯 & 聚合
     "ТАСС": 3,
     "РИА Новости": 3,
     "РТ на русском": 3,
     "Lenta.ru": 3,
+    "Dzen · СВО": 3,
 }
 
 RUSSIA_CACHE_TTL = int(os.getenv("RUSSIA_CACHE_TTL", "600"))  # 秒；默认 10 分钟
@@ -298,11 +315,35 @@ def _parsed_to_ts(struct_time_or_none) -> float | None:
         return None
 
 _POLITICS_KW = (
-    "мид ", "госдум", "цик", "санкц", "нато", "всу", "сво", "переговор",
+    "мид ", "госдум", "цик", "санкц", "нато", "переговор",
     "дипломат", "захаров", "песков", "лавров", "кремл", "парламент",
     "выбор", "оборон", "мигрант", "гражданств", "экстремист", "фсб",
-    "теракт", "война", "министр", "закон", "депутат", "украин", "зеленск",
+    "теракт", "министр", "закон", "депутат",
     "трамп", "байден", "белорусс", "лукашенк", "балт",
+)
+
+# 俄乌关系板块（"所有与乌克兰相关内容"）
+_UKRAINE_KW = (
+    # 俄方视角常用词
+    "украин", "зеленск", "всу", "сво ", " сво", "спецопераци",
+    "днр", "лнр", "донбасс", "донец", "луган", "херсон", "запорож",
+    "мариупол", "энергодар", "азовск", "азовст",
+    # 乌方地区
+    "харьк", "одесс", "николаев", "днепропетровск", "днепр", "черниг",
+    "житомир", "львов", "полтав", "суми", "черкасс", "винниц",
+    "хмельниц", "ровенск", "ужгород", "тернопол", "чернов", "кременчуг",
+    "мелитопол", "бердянск", "кривий рог", "кривой рог",
+    "киев", "киеве", "киева", "киево", "kyiv", "kiev",
+    # 乌方军政人物
+    "ермак", "буданов", "залужн", "сырский", "клич",
+    "стефанчук", "шмигаль", "уманский", "умеров", "камыш", "камышин",
+    # 西方援乌武器
+    "himars", "atacms", "taurus", "storm shadow", "patriot", "abrams",
+    "leopard", "флеминго", "нептун",
+    # 英文
+    "ukraine", "ukrainian", "kharkiv", "kherson", "donetsk", "luhansk",
+    "mariupol", "azov", "zelensky", "zelenskyy", "zaluzhny", "syrsky",
+    "himars", "atacms", "russo-ukrainian", "kyiv independent",
 )
 _ECONOMY_KW = (
     "рубл", "доллар", "евро", "юан", "цб ", "центробанк", "инфляц", "ввп",
@@ -320,11 +361,15 @@ _SOCIAL_KW = (
 
 
 def categorize_ru(title: str, author: str = "", summary: str = "") -> str:
-    """归类：重点专家 > 梅金斯基 > 普京 > 政治 > 经济 > 社会 > other。
+    """归类：重点专家 > 梅金斯基 > 普京 > 俄乌关系 > 政治 > 经济 > 社会 > other。
 
-    重点专家匹配范围包括标题、作者、以及正文简介前 500 字，
-    因为像 РСМД、Международная жизнь 的 RSS 通常不带 author 字段，
-    专家的姓氏往往只出现在文章简介或者副标题里。"""
+    - 「重点专家」匹配范围包括标题、作者、正文简介前 500 字，因为像 РСМД、
+      Международная жизнь 的 RSS 通常不带 author 字段，专家的姓氏往往只
+      出现在简介或副标题里。
+    - 普京栏放在乌克兰栏前面：让普京自己的表态/会见落到「普京新闻」，
+      其它一切与乌克兰相关的报道（ВСУ、泽连斯基、СВО 战报、乌军城市等）
+      落到「俄乌关系」。
+    """
     expert_haystack = " ".join([title, author or "", (summary or "")[:500]]).lower()
     for kw in EXPERT_KEYWORDS:
         if kw in expert_haystack:
@@ -334,6 +379,9 @@ def categorize_ru(title: str, author: str = "", summary: str = "") -> str:
         return "medinsky"
     if "путин" in t or "владимир владимирович" in t:
         return "putin"
+    for kw in _UKRAINE_KW:
+        if kw in t:
+            return "ukraine"
     for kw in _POLITICS_KW:
         if kw in t:
             return "politics"
@@ -451,6 +499,7 @@ def api_russia_news():
         "putin": [],
         "medinsky": [],
         "experts": [],
+        "ukraine": [],
     }
     # (1) 时间过滤：只保留过去 RUSSIA_MAX_AGE_HOURS 小时（默认 24 小时）内发布的条目
     #     没有 published_ts 的条目保守保留（避免把没日期字段的智库分析全砍掉）。
@@ -491,8 +540,8 @@ def api_russia_news():
             buckets[cat].append(it)
 
     LIMITS = {
-        "politics": 8, "economy": 6, "social": 6,
-        "putin": 6, "medinsky": 4, "experts": 6,
+        "politics": 8, "economy": 6, "social": 5,
+        "putin": 6, "medinsky": 4, "experts": 6, "ukraine": 8,
     }
     for cat, limit in LIMITS.items():
         buckets[cat].sort(key=lambda it: it["_rank"])

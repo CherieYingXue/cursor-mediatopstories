@@ -124,7 +124,7 @@
 <div class="wrap">
 <header>
   <h1><span class="flag">RU</span>俄罗斯主流媒体重点新闻</h1>
-  <div class="sub">来源俄语原文站：ТАСС · РИА · РТ · Lenta.ru · Российская газета · Коммерсантъ · Известия · Взгляд · Kremlin.ru，以及智库源 Валдайский клуб · Международная жизнь · РСМД · Carnegie Russia-Eurasia。俄语原标题即为超链接，正下方是中文翻译。</div>
+  <div class="sub">俄语官媒 ТАСС · РИА · РТ · Lenta.ru · Российская газета · Коммерсантъ · Известия · Взгляд · Kremlin.ru，智库 Валдай · Международная жизнь · РСМД · Carnegie Russia-Eurasia，以及俄乌关系补充源 Dzen СВО · Укринформ · Интерфакс-Украина。原标题即为超链接，下方为中文翻译。</div>
   <div class="status-bar">
     <div id="statusDot" class="status-dot loading" aria-hidden="true"></div>
     <div id="statusText" class="status-text">正在自动获取最新新闻…</div>
@@ -201,6 +201,11 @@ const FALLBACK = {
     ],
     experts: [
       {title:"（等待抓取）目标专家：Сергей Лузянин · Алексей Маслов · Андрей Кортунов · Василий Кашин", url:"https://ru.valdaiclub.com/", source:"提示", title_zh:"当自动抓取从 Валдайский клуб / Международная жизнь / РСМД / Carnegie 抓到这 4 位专家的最新文章或对他们的引用时，会自动出现在本板块。"}
+    ],
+    ukraine: [
+      {title:"ВСУ выпустили в сторону России ракеты большой дальности «Фламинго» и сотни БПЛА", url:"https://lenta.ru/news/2026/07/21/vsu-vypustili-v-storonu-rossii-rakety-bolshoy-dalnosti-flamingo-i-sotni-bpla/", source:"Lenta.ru", title_zh:"乌军向俄发射「火烈鸟」远程巡航导弹并投入数百架无人机；俄防空系统击落 7 枚「火烈鸟」、8 枚 HIMARS 火箭弹和 655 架无人机。"},
+      {title:"Песков назвал причину проведения СВО", url:"https://lenta.ru/news/2026/07/21/peskov-nazval-prichinu-provedeniya-svo/", source:"Lenta.ru", title_zh:"佩斯科夫说明"特别军事行动"的目的：不让北约军队出现在乌克兰。"},
+      {title:"Удары высокоточным оружием: ВС РФ поразили места хранения военных грузов в порту Одесса", url:"https://russian.rt.com/ussr/article/1659680-udar-port-odessa-vsu", source:"РТ на русском", title_zh:"俄军夜袭敖德萨港：摧毁乌军物资仓库、远程无人机组装点。"}
     ]
   }
 };
@@ -209,6 +214,7 @@ const FALLBACK = {
 const CATEGORY_META = [
   { key: "politics", zh: "政治新闻", ru: "Политика" },
   { key: "economy",  zh: "经济新闻", ru: "Экономика" },
+  { key: "ukraine",  zh: "俄乌关系", ru: "Россия · Украина · СВО" },
   { key: "social",   zh: "社会新闻", ru: "Общество и происшествия" },
   { key: "putin",    zh: "普京新闻", ru: "Владимир Путин" },
   { key: "medinsky", zh: "梅金斯基新闻", ru: "Владимир Мединский" },
