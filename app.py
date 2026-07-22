@@ -67,6 +67,7 @@ def healthz():
 # /api/russia-news : 并行抓 RSS + 关键词归类 + 谷歌无鉴权翻译
 # ---------------------------------------------------------------------------
 RUSSIA_FEEDS: list[tuple[str, str]] = [
+    # 通讯社 & 主流报刊
     ("ТАСС", "https://tass.ru/rss/v2.xml"),
     ("РИА Новости", "https://ria.ru/export/rss2/archive/index.xml"),
     ("РТ на русском", "https://russian.rt.com/rss"),
@@ -74,8 +75,45 @@ RUSSIA_FEEDS: list[tuple[str, str]] = [
     ("Российская газета", "https://rg.ru/xml/index.xml"),
     ("Коммерсантъ", "https://www.kommersant.ru/RSS/news.xml"),
     ("Известия", "https://iz.ru/xml/rss/all.xml"),
+    ("Взгляд", "https://vz.ru/rss.xml"),
     ("Kremlin.ru", "http://kremlin.ru/events/all/feed"),
+    # 智库 & 政策分析
+    ("Валдайский клуб", "https://ru.valdaiclub.com/export/rss/feed.xml"),
+    ("Международная жизнь", "https://interaffairs.ru/rss/"),
+    ("РСМД", "https://russiancouncil.ru/rss/all/"),
+    (
+        "Carnegie Russia-Eurasia",
+        "https://news.google.com/rss/search?"
+        "q=site:carnegieendowment.org+(russia+OR+eurasia+OR+putin+OR+kremlin)"
+        "&hl=en-US&gl=US&ceid=US:en",
+    ),
 ]
+
+# 重点专家：标题或作者中出现任何一个即进入"重点专家"板块（最高优先级）
+EXPERT_KEYWORDS: tuple[str, ...] = (
+    "лузянин", "luzyanin",
+    "маслов", "maslov",
+    "кортунов", "kortunov",
+    "кашин", "kashin",
+)
+
+# 源优先级：智库最高，官方媒体次之，通讯社最后。用于每个板块内部排序，
+# 让分析类文章在通讯社快讯挤满 8 个位置之前先被选中。
+SOURCE_PRIORITY: dict[str, int] = {
+    "Валдайский клуб": 0,
+    "Международная жизнь": 0,
+    "РСМД": 0,
+    "Carnegie Russia-Eurasia": 0,
+    "Kremlin.ru": 1,
+    "Российская газета": 1,
+    "Известия": 1,
+    "Взгляд": 1,
+    "Коммерсантъ": 2,
+    "ТАСС": 3,
+    "РИА Новости": 3,
+    "РТ на русском": 3,
+    "Lenta.ru": 3,
+}
 
 RUSSIA_CACHE_TTL = int(os.getenv("RUSSIA_CACHE_TTL", "600"))  # 秒；默认 10 分钟
 _russia_cache: dict[str, Any] = {"ts": 0.0, "data": None}
@@ -102,8 +140,16 @@ _SOCIAL_KW = (
 )
 
 
-def categorize_ru(title: str) -> str:
-    """人物类别优先，其次按关键词归类。"""
+def categorize_ru(title: str, author: str = "", summary: str = "") -> str:
+    """归类：重点专家 > 梅金斯基 > 普京 > 政治 > 经济 > 社会 > other。
+
+    重点专家匹配范围包括标题、作者、以及正文简介前 500 字，
+    因为像 РСМД、Международная жизнь 的 RSS 通常不带 author 字段，
+    专家的姓氏往往只出现在文章简介或者副标题里。"""
+    expert_haystack = " ".join([title, author or "", (summary or "")[:500]]).lower()
+    for kw in EXPERT_KEYWORDS:
+        if kw in expert_haystack:
+            return "experts"
     t = title.lower()
     if "медински" in t:
         return "medinsky"
@@ -122,19 +168,35 @@ def categorize_ru(title: str) -> str:
 
 
 def _fetch_feed(name_url: tuple[str, str]) -> list[dict[str, Any]]:
+    """抓一路 RSS。Google News RSS 的标题末尾会被清洗；对个别拒绝 CH-UA 头的源退化到桌面 UA。"""
     name, url = name_url
-    try:
-        resp = requests.get(url, headers=MOBILE_REQUEST_HEADERS, timeout=8)
-        resp.raise_for_status()
-        parsed = feedparser.parse(resp.content)
-    except Exception:
+    parsed = None
+    for headers in (MOBILE_REQUEST_HEADERS, {"User-Agent": "Mozilla/5.0", "Accept": "*/*"}):
+        try:
+            resp = requests.get(url, headers=headers, timeout=12)
+            if resp.status_code != 200:
+                continue
+            parsed = feedparser.parse(resp.content)
+            if getattr(parsed, "entries", None):
+                break
+        except Exception:
+            continue
+    if parsed is None or not getattr(parsed, "entries", None):
         return []
 
+    is_google_news = "news.google.com" in url
     out: list[dict[str, Any]] = []
     for entry in parsed.entries[:25]:
         title = (entry.get("title") or "").strip()
         link = entry.get("link") or ""
+        author = entry.get("author") or entry.get("dc_creator") or ""
         published = entry.get("published") or entry.get("updated") or ""
+        summary = entry.get("summary") or entry.get("description") or ""
+
+        # 对 Google News 包装做清理：标题末尾 " - Carnegie Endowment for..." 去掉
+        if is_google_news and " - " in title:
+            title = title.rsplit(" - ", 1)[0].strip()
+
         if title and link:
             out.append(
                 {
@@ -142,13 +204,15 @@ def _fetch_feed(name_url: tuple[str, str]) -> list[dict[str, Any]]:
                     "url": link,
                     "source": name,
                     "published": published,
+                    "author": author,
+                    "summary": summary,
                 }
             )
     return out
 
 
-def _translate_ru_to_zh(text: str) -> str:
-    """谷歌无鉴权翻译端点。失败返回空串；前端会退化为只显示俄语原标题。"""
+def _translate_to_zh(text: str) -> str:
+    """谷歌无鉴权翻译端点。用 sl=auto 兼容俄语原标题与 Carnegie 的英文标题。"""
     if not text:
         return ""
     try:
@@ -156,7 +220,7 @@ def _translate_ru_to_zh(text: str) -> str:
             "https://translate.googleapis.com/translate_a/single",
             params={
                 "client": "gtx",
-                "sl": "ru",
+                "sl": "auto",
                 "tl": "zh-CN",
                 "dt": "t",
                 "q": text,
@@ -186,7 +250,7 @@ def api_russia_news():
         payload["age_seconds"] = int(now - _russia_cache["ts"])
         return jsonify(payload)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(8, len(RUSSIA_FEEDS))) as ex:
         fetched = list(ex.map(_fetch_feed, RUSSIA_FEEDS))
     all_items = [it for lst in fetched for it in lst]
 
@@ -203,20 +267,37 @@ def api_russia_news():
         "social": [],
         "putin": [],
         "medinsky": [],
+        "experts": [],
     }
-    for it in unique:
-        cat = categorize_ru(it["title"])
+    # 分类并记录每条新闻在**同一 source 内**的序号，用于轮询排序。
+    per_source_seen: dict[str, int] = {}
+    for idx, it in enumerate(unique):
+        cat = categorize_ru(it["title"], it.get("author", ""), it.get("summary", ""))
+        pos_in_source = per_source_seen.get(it["source"], 0)
+        per_source_seen[it["source"]] = pos_in_source + 1
+        # 排序键：(优先级 tier, 该源在这个板块里的第 N 条, 全局 idx)
+        # → 效果：先取每个高优先级源的第 1 条，再取第 2 条…
+        #        这样智库分析 + 主流媒体快讯自然交错，不会某一家把整个板块占满。
+        it["_rank"] = (SOURCE_PRIORITY.get(it["source"], 9), pos_in_source, idx)
         if cat in buckets:
             buckets[cat].append(it)
 
-    LIMITS = {"politics": 8, "economy": 6, "social": 6, "putin": 6, "medinsky": 4}
+    LIMITS = {
+        "politics": 8, "economy": 6, "social": 6,
+        "putin": 6, "medinsky": 4, "experts": 6,
+    }
     for cat, limit in LIMITS.items():
+        buckets[cat].sort(key=lambda it: it["_rank"])
         buckets[cat] = buckets[cat][:limit]
+    for lst in buckets.values():
+        for it in lst:
+            it.pop("_rank", None)
+            it.pop("summary", None)  # 简介只用于分类，不必回给前端
 
     to_translate = [it for lst in buckets.values() for it in lst]
 
     def _apply(it: dict[str, Any]) -> None:
-        it["title_zh"] = _translate_ru_to_zh(it["title"])
+        it["title_zh"] = _translate_to_zh(it["title"])
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
         list(ex.map(_apply, to_translate))

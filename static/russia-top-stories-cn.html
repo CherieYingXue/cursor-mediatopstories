@@ -124,7 +124,7 @@
 <div class="wrap">
 <header>
   <h1><span class="flag">RU</span>俄罗斯主流媒体重点新闻</h1>
-  <div class="sub">来源为俄语原文站：ТАСС / РИА / РТ / Lenta.ru / Российская газета / Коммерсантъ / Известия / Kremlin.ru 等。俄语原标题即为超链接，标题正下方是中文翻译。</div>
+  <div class="sub">来源俄语原文站：ТАСС · РИА · РТ · Lenta.ru · Российская газета · Коммерсантъ · Известия · Взгляд · Kremlin.ru，以及智库源 Валдайский клуб · Международная жизнь · РСМД · Carnegie Russia-Eurasia。俄语原标题即为超链接，正下方是中文翻译。</div>
   <div class="status-bar">
     <div id="statusDot" class="status-dot loading" aria-hidden="true"></div>
     <div id="statusText" class="status-text">正在自动获取最新新闻…</div>
@@ -198,6 +198,9 @@ const FALLBACK = {
       {title:"Мединский поддержал идею объединить экзамены по истории и обществознанию", url:"https://www.pnp.ru/social/medinskiy-podderzhal-ideyu-obedinit-ekzameny-po-istorii-i-obshhestvoznaniyu.html", source:"Парламентская газета", title_zh:"《议会报》详细报道梅金斯基关于历史与社会学合并考试的建议。"},
       {title:"Названы сроки проведения первых устных экзаменов по истории для российских школьников", url:"https://lenta.ru/news/2026/07/09/nazvany-sroki-provedeniya-pervyh-ustnyh-ekzamenov-po-istorii-dlya-rossiyskih-shkolnikov/", source:"Lenta.ru", title_zh:"官方公布俄罗斯中小学生首场「历史口试」时间，背景为梅金斯基提出的 8:2 合并方案。"},
       {title:"Мединский: Медведев лично редактирует учебники обществознания", url:"https://novosti-segodnya.ru/segodnya/878765-medinskiy-medvedev-lichno-redaktiruet-uchebniki-obschestvoznaniya", source:"Новости сегодня", title_zh:"梅金斯基在圣彼得堡国际法律论坛透露：梅德韦杰夫亲自参与新版《社会学》教材的文字编辑。"}
+    ],
+    experts: [
+      {title:"（等待抓取）目标专家：Сергей Лузянин · Алексей Маслов · Андрей Кортунов · Василий Кашин", url:"https://ru.valdaiclub.com/", source:"提示", title_zh:"当自动抓取从 Валдайский клуб / Международная жизнь / РСМД / Carnegie 抓到这 4 位专家的最新文章或对他们的引用时，会自动出现在本板块。"}
     ]
   }
 };
@@ -208,7 +211,8 @@ const CATEGORY_META = [
   { key: "economy",  zh: "经济新闻", ru: "Экономика" },
   { key: "social",   zh: "社会新闻", ru: "Общество и происшествия" },
   { key: "putin",    zh: "普京新闻", ru: "Владимир Путин" },
-  { key: "medinsky", zh: "梅金斯基新闻", ru: "Владимир Мединский" }
+  { key: "medinsky", zh: "梅金斯基新闻", ru: "Владимир Мединский" },
+  { key: "experts",  zh: "重点专家", ru: "Лузянин · Маслов · Кортунов · Кашин" }
 ];
 
 const $ = id => document.getElementById(id);
