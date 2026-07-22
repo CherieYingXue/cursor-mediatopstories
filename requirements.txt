@@ -1,8 +1,4 @@
-flask
-feedparser
-requests
-beautifulsoup4
-pyinstaller
-apscheduler
-gunicorn
-openpyxl
+flask>=3.0
+feedparser>=6.0
+requests>=2.32
+gunicorn>=22.0

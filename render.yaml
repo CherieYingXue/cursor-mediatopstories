@@ -1,17 +1,16 @@
 services:
   - type: web
     name: russia-media-reports
-    branch: cursor/russian-media-top-stories-d482
+    branch: cursor/russia-reports-main-d482
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT app:app
+    healthCheckPath: /healthz
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: LANDING_PATH
         value: "/russia"
-      - key: DAILY_RUN_HOUR
-        value: "8"
-      - key: DAILY_RUN_MINUTE
-        value: "0"
+      - key: RUSSIA_CACHE_TTL
+        value: "600"
