@@ -360,15 +360,26 @@ _SOCIAL_KW = (
 )
 
 
+# 阿列克谢·久明专属关键词（含变格 + 拉丁转写）
+# Алексей Геннадьевич Дюмин — Государственный совет РФ 秘书兼总统助理，
+# 曾任图拉州州长，普京核心圈成员。
+DYUMIN_KEYWORDS: tuple[str, ...] = (
+    "дюмин", "дюмина", "дюмину", "дюминым", "дюмине", "дюминовск",
+    "алексей дюмин", "алексея дюмина",
+    "dyumin", "diumin", "alexei dyumin", "aleksey dyumin",
+)
+
+
 def categorize_ru(title: str, author: str = "", summary: str = "") -> str:
-    """归类：重点专家 > 梅金斯基 > 普京 > 俄乌关系 > 政治 > 经济 > 社会 > other。
+    """归类：重点专家 > 梅金斯基 > 久明 > 普京 > 俄乌关系 > 政治 > 经济 > 社会 > other。
 
     - 「重点专家」匹配范围包括标题、作者、正文简介前 500 字，因为像 РСМД、
       Международная жизнь 的 RSS 通常不带 author 字段，专家的姓氏往往只
       出现在简介或副标题里。
-    - 普京栏放在乌克兰栏前面：让普京自己的表态/会见落到「普京新闻」，
-      其它一切与乌克兰相关的报道（ВСУ、泽连斯基、СВО 战报、乌军城市等）
-      落到「俄乌关系」。
+    - 梅金斯基、久明这两位克宫核心圈人物排在普京前面，让他们的专属报道
+      优先入自己的板块；普京自己的表态/会见落到「普京新闻」；其它一切
+      与乌克兰相关的报道（ВСУ、泽连斯基、СВО 战报、乌军城市等）落到
+      「俄乌关系」。
     """
     expert_haystack = " ".join([title, author or "", (summary or "")[:500]]).lower()
     for kw in EXPERT_KEYWORDS:
@@ -377,6 +388,9 @@ def categorize_ru(title: str, author: str = "", summary: str = "") -> str:
     t = title.lower()
     if "медински" in t:
         return "medinsky"
+    for kw in DYUMIN_KEYWORDS:
+        if kw in t:
+            return "dyumin"
     if "путин" in t or "владимир владимирович" in t:
         return "putin"
     for kw in _UKRAINE_KW:
@@ -498,6 +512,7 @@ def api_russia_news():
         "social": [],
         "putin": [],
         "medinsky": [],
+        "dyumin": [],
         "experts": [],
         "ukraine": [],
     }
@@ -541,7 +556,8 @@ def api_russia_news():
 
     LIMITS = {
         "politics": 8, "economy": 6, "social": 5,
-        "putin": 6, "medinsky": 4, "experts": 6, "ukraine": 8,
+        "putin": 6, "medinsky": 4, "dyumin": 4,
+        "experts": 6, "ukraine": 8,
     }
     for cat, limit in LIMITS.items():
         buckets[cat].sort(key=lambda it: it["_rank"])
