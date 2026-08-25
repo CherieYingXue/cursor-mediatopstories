@@ -456,28 +456,72 @@ def _fetch_feed(name_url: tuple[str, str]) -> list[dict[str, Any]]:
     return out
 
 
+_TRANSLATE_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+)
+
+
+def _guess_source_lang(text: str) -> str:
+    """粗判源语言：Carnegie 等英文标题走 en，其余默认 ru。"""
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return "auto"
+    latin = sum(1 for c in letters if ord(c) < 128)
+    return "en" if latin / len(letters) > 0.55 else "ru"
+
+
+def _google_translate_to_zh(text: str) -> str:
+    """Google 非官方端点。gtx 在 Render IP 上常被 429，dict-chrome-ex 更稳。"""
+    resp = requests.get(
+        "https://translate.googleapis.com/translate_a/single",
+        params={
+            "client": "dict-chrome-ex",
+            "sl": _guess_source_lang(text),
+            "tl": "zh-CN",
+            "dt": "t",
+            "q": text,
+        },
+        headers={"User-Agent": _TRANSLATE_UA},
+        timeout=8,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return "".join(seg[0] for seg in data[0] if seg and seg[0]).strip()
+
+
+def _mymemory_translate_to_zh(text: str) -> str:
+    """MyMemory 免费 API，作为 Google 被限流时的后备。"""
+    src = _guess_source_lang(text)
+    if src == "auto":
+        src = "ru"
+    resp = requests.get(
+        "https://api.mymemory.translated.net/get",
+        params={"q": text, "langpair": f"{src}|zh-CN"},
+        headers={"User-Agent": _TRANSLATE_UA},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    translated = (resp.json().get("responseData") or {}).get("translatedText") or ""
+    translated = translated.strip()
+    # API 在配额用尽时会原样返回英文提示，视为失败。
+    if not translated or translated.upper().startswith("MYMEMORY WARNING"):
+        return ""
+    return translated
+
+
 def _translate_to_zh(text: str) -> str:
-    """谷歌无鉴权翻译端点。用 sl=auto 兼容俄语原标题与 Carnegie 的英文标题。"""
+    """俄语/英语标题 → 简体中文。Google 优先，MyMemory 兜底。"""
     if not text:
         return ""
-    try:
-        resp = requests.get(
-            "https://translate.googleapis.com/translate_a/single",
-            params={
-                "client": "gtx",
-                "sl": "auto",
-                "tl": "zh-CN",
-                "dt": "t",
-                "q": text,
-            },
-            headers={"User-Agent": MOBILE_HTTP_USER_AGENT},
-            timeout=6,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return "".join(seg[0] for seg in data[0] if seg and seg[0]).strip()
-    except Exception:
-        return ""
+    for translate in (_google_translate_to_zh, _mymemory_translate_to_zh):
+        try:
+            translated = translate(text)
+            if translated:
+                return translated
+        except Exception:
+            continue
+    return ""
 
 
 @app.route("/api/russia-news")
